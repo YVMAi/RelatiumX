@@ -17,6 +17,7 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string) => Promise<{ error: AuthError | null, user: User | null }>;
   logout: () => Promise<void>;
   updateProfile: (profile: Partial<Profile>) => Promise<{ error: Error | null }>;
+  hasPermission: (action: string, resource: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -141,6 +142,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Check user permissions
+  const hasPermission = (action: string, resource: string): boolean => {
+    // If not authenticated, no permissions
+    if (!isAuthenticated || !profile) return false;
+    
+    // Admin has all permissions
+    if (isAdmin) return true;
+    
+    // For regular users, implement basic permission checks
+    // This is a simple implementation - you might want to expand this based on your needs
+    
+    // Users can always view things
+    if (action === 'view') return true;
+    
+    // Users can create new items
+    if (action === 'create') return true;
+    
+    // Users can update/delete their own items
+    if ((action === 'update:own' || action === 'delete:own') && resource) {
+      return true;
+    }
+    
+    // Default deny
+    return false;
+  };
+
   const value = {
     user,
     profile,
@@ -152,6 +179,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signup,
     logout,
     updateProfile,
+    hasPermission,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

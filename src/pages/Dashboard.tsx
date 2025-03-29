@@ -60,7 +60,7 @@ const DashboardMetricCard = ({ metric }: { metric: DashboardMetric }) => {
 };
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const [timePeriod, setTimePeriod] = useState('thisMonth');
   
   // Calculate some basic metrics for the dashboard
@@ -76,7 +76,7 @@ const Dashboard = () => {
       <div className="flex flex-col md:flex-row justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back, {user?.name}!</p>
+          <p className="text-muted-foreground">Welcome back, {profile?.name || 'User'}!</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={timePeriod} onValueChange={setTimePeriod}>
