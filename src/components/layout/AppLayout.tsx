@@ -1,5 +1,4 @@
-
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { useIsMobile } from '@/hooks/use-mobile';

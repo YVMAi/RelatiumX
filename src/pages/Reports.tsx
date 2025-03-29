@@ -22,18 +22,55 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { mockTransactions } from '@/data/mockData';
 
-// Sample report data
-const reportData = mockTransactions.map((transaction) => ({
-  id: transaction.id,
-  client: transaction.client,
-  amount: transaction.amount,
-  date: transaction.date,
-  salesperson: transaction.salesperson,
-  status: transaction.status,
-  type: Math.random() > 0.5 ? 'Product' : 'Service'
-}));
+// Sample report data instead of using mockTransactions
+const reportData = [
+  {
+    id: "1",
+    client: "TechCorp",
+    amount: 4.5,
+    date: "2023-04-15",
+    salesperson: "Amit Sharma",
+    status: "Complete",
+    type: "Product"
+  },
+  {
+    id: "2",
+    client: "GlobalFinance",
+    amount: 2.7,
+    date: "2023-04-10",
+    salesperson: "Priya Patel",
+    status: "Pending",
+    type: "Service"
+  },
+  {
+    id: "3",
+    client: "HealthPlus",
+    amount: 3.2,
+    date: "2023-04-05",
+    salesperson: "Rahul Singh",
+    status: "Complete",
+    type: "Product"
+  },
+  {
+    id: "4",
+    client: "EduWorld",
+    amount: 1.8,
+    date: "2023-03-28",
+    salesperson: "Deepa Gupta",
+    status: "Pending",
+    type: "Service"
+  },
+  {
+    id: "5",
+    client: "ManufactTech",
+    amount: 5.3,
+    date: "2023-03-20",
+    salesperson: "Vikram Mehta",
+    status: "Complete",
+    type: "Product"
+  }
+];
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortField = 'client' | 'amount' | 'date' | 'salesperson' | 'status' | 'type';
@@ -254,7 +291,7 @@ const Reports = () => {
                           <TableCell>{row.date}</TableCell>
                           <TableCell>{row.salesperson}</TableCell>
                           <TableCell>
-                            <Badge variant={row.status === 'Complete' ? 'success' : 'default'}>
+                            <Badge variant={row.status === 'Complete' ? 'secondary' : 'default'}>
                               {row.status}
                             </Badge>
                           </TableCell>
@@ -277,7 +314,7 @@ const Reports = () => {
                             <TableCell>{row.date}</TableCell>
                             <TableCell>{row.salesperson}</TableCell>
                             <TableCell>
-                              <Badge variant={row.status === 'Complete' ? 'success' : 'default'}>
+                              <Badge variant={row.status === 'Complete' ? 'secondary' : 'default'}>
                                 {row.status}
                               </Badge>
                             </TableCell>
