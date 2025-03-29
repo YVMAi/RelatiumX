@@ -7,9 +7,7 @@ import {
   Users, 
   LucideIcon, 
   ClipboardList, 
-  BarChart4, 
   Settings, 
-  HelpCircle, 
   Kanban,
   ChevronLeft,
   ChevronRight
@@ -49,10 +47,8 @@ export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     { title: 'Dashboard', icon: LayoutDashboard, href: '/' },
     { title: 'Lead Pipeline', icon: Kanban, href: '/pipeline' },
     { title: 'Leads Management', icon: ClipboardList, href: '/leads' },
-    { title: 'Reports', icon: BarChart4, href: '/reports' },
     { title: 'User Management', icon: Users, href: '/users', requireAdmin: true },
     { title: 'Settings', icon: Settings, href: '/settings' },
-    { title: 'Help & Support', icon: HelpCircle, href: '/support' },
   ];
 
   const filteredItems = sidebarItems.filter(item => !item.requireAdmin || isAdmin);

@@ -9,12 +9,10 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
 import Pipeline from "./pages/Pipeline";
 import Leads from "./pages/Leads";
-import Reports from "./pages/Reports";
 import UserManagement from "./pages/UserManagement";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
-import { useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
 // Create a new QueryClient instance outside the component
@@ -35,10 +33,8 @@ const App = () => {
                   <Route index element={<Dashboard />} />
                   <Route path="pipeline" element={<Pipeline />} />
                   <Route path="leads" element={<Leads />} />
-                  <Route path="reports" element={<Reports />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="settings" element={<Settings />} />
-                  <Route path="support" element={<Navigate to="/" replace />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
