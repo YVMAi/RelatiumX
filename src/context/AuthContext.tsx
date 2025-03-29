@@ -1,211 +1,172 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserRole } from '@/types';
-import { mockUsers, currentUser as defaultUser } from '@/data/mockData';
-import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User, AuthError } from '@supabase/supabase-js';
+import { Profile } from '@/types/supabase';
+import { profileService } from '@/services/api';
 
+// Define the context type
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  profile: Profile | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  hasPermission: (action: string, resource: string) => boolean;
   isAdmin: boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ error: AuthError | null }>;
+  signup: (email: string, password: string, name: string) => Promise<{ error: AuthError | null, user: User | null }>;
+  logout: () => Promise<void>;
+  updateProfile: (profile: Partial<Profile>) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Provider component
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const { toast } = useToast();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Check if user is authenticated
+  const isAuthenticated = !!user;
+  
+  // Check if user is admin
+  const isAdmin = profile?.role_id === 1; // Assuming role_id 1 is admin
 
   useEffect(() => {
-    // Check for saved user in localStorage
-    const savedUser = localStorage.getItem('relatiumx_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        console.error('Error parsing saved user', error);
-        localStorage.removeItem('relatiumx_user');
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        // When auth state changes, fetch profile if user exists
+        if (session?.user) {
+          // Use setTimeout to avoid potential deadlocks
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
       }
-    }
-    setLoading(false);
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
-    setLoading(true);
-    
+  // Fetch user profile
+  const fetchProfile = async (userId: string) => {
     try {
-      // In a real app, this would be an API call
-      // For this mock version, we're using the mock data
-      const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
       
-      if (!foundUser) {
-        throw new Error('Invalid email or password');
-      }
+      if (error) throw error;
       
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setUser(foundUser);
-      localStorage.setItem('relatiumx_user', JSON.stringify(foundUser));
-      
-      toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${foundUser.name}!`,
-      });
+      setProfile(data as Profile);
     } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: 'Login Failed',
-        description: error instanceof Error ? error.message : 'An error occurred during login',
-        variant: 'destructive',
-      });
-      throw error;
+      console.error('Error fetching profile:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('relatiumx_user');
-    toast({
-      title: 'Logged Out',
-      description: 'You have been successfully logged out.',
+  // Login function
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+    
+    return { error };
   };
 
-  const hasPermission = (action: string, resource: string): boolean => {
-    if (!user) return false;
+  // Signup function
+  const signup = async (email: string, password: string, name: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { name }
+      }
+    });
     
-    // Admin has all permissions
-    if (user.role === 'admin') return true;
-    
-    // For regular users, we can implement more granular permissions
-    // This is a simplified version
-    const permissions: Record<string, string[]> = {
-      user: [
-        'read:leads',
-        'create:leads',
-        'update:own:leads',
-        'delete:own:leads',
-        'read:tasks',
-        'create:tasks',
-        'update:own:tasks',
-        'delete:own:tasks',
-      ]
-    };
-    
-    const rolePermissions = permissions[user.role] || [];
-    return rolePermissions.includes(`${action}:${resource}`) || 
-           rolePermissions.includes(`${action}:own:${resource}`);
+    return { error, user: data?.user ?? null };
   };
 
-  return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      login,
-      logout,
-      isAuthenticated: !!user,
-      hasPermission,
-      isAdmin: user?.role === 'admin'
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // Logout function
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  // Update profile
+  const updateProfile = async (profileData: Partial<Profile>) => {
+    if (!user) return { error: new Error('Not authenticated') };
+    
+    try {
+      const { error } = await profileService.updateProfile({
+        ...profileData,
+        id: user.id,
+      });
+      
+      if (error) throw error;
+      
+      // Update local profile state
+      if (profile) {
+        setProfile({ ...profile, ...profileData });
+      }
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const value = {
+    user,
+    profile,
+    session,
+    isAuthenticated,
+    isAdmin,
+    loading,
+    login,
+    signup,
+    logout,
+    updateProfile,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
+// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-// For development purposes, we'll auto-login as admin
+// Simple dev auth provider for development/testing
 export const DevAuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(defaultUser);
-  const [loading, setLoading] = useState<boolean>(false);
-  const { toast } = useToast();
-
-  const login = async (email: string, password: string) => {
-    setLoading(true);
-    
-    try {
-      const foundUser = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
-      
-      if (!foundUser) {
-        throw new Error('Invalid email or password');
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setUser(foundUser);
-      
-      toast({
-        title: 'Login Successful',
-        description: `Welcome back, ${foundUser.name}!`,
-      });
-    } catch (error) {
-      console.error('Login error:', error);
-      toast({
-        title: 'Login Failed',
-        description: error instanceof Error ? error.message : 'An error occurred during login',
-        variant: 'destructive',
-      });
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = () => {
-    setUser(null);
-    toast({
-      title: 'Logged Out',
-      description: 'You have been successfully logged out.',
-    });
-  };
-
-  const hasPermission = (action: string, resource: string): boolean => {
-    if (!user) return false;
-    if (user.role === 'admin') return true;
-    
-    const permissions: Record<string, string[]> = {
-      user: [
-        'read:leads',
-        'create:leads',
-        'update:own:leads',
-        'delete:own:leads',
-        'read:tasks',
-        'create:tasks',
-        'update:own:tasks',
-        'delete:own:tasks',
-      ]
-    };
-    
-    const rolePermissions = permissions[user.role] || [];
-    return rolePermissions.includes(`${action}:${resource}`) || 
-           rolePermissions.includes(`${action}:own:${resource}`);
-  };
-
-  return (
-    <AuthContext.Provider value={{
-      user,
-      loading,
-      login,
-      logout,
-      isAuthenticated: !!user,
-      hasPermission,
-      isAdmin: user?.role === 'admin'
-    }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthProvider>{children}</AuthProvider>;
 };

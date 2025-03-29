@@ -9,7 +9,372 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          change_details: Json | null
+          change_timestamp: string | null
+          changed_by: string | null
+          id: number
+          record_id: number
+          table_name: string
+        }
+        Insert: {
+          action: string
+          change_details?: Json | null
+          change_timestamp?: string | null
+          changed_by?: string | null
+          id?: number
+          record_id: number
+          table_name: string
+        }
+        Update: {
+          action?: string
+          change_details?: Json | null
+          change_timestamp?: string | null
+          changed_by?: string | null
+          id?: number
+          record_id?: number
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_change_logs: {
+        Row: {
+          change_timestamp: string | null
+          changed_by: string | null
+          changed_field: string
+          id: number
+          lead_id: number | null
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          change_timestamp?: string | null
+          changed_by?: string | null
+          changed_field: string
+          id?: number
+          lead_id?: number | null
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          change_timestamp?: string | null
+          changed_by?: string | null
+          changed_field?: string
+          id?: number
+          lead_id?: number | null
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_change_logs_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_change_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_stages: {
+        Row: {
+          created_at: string | null
+          id: number
+          sequence: number
+          stage_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          sequence: number
+          stage_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          sequence?: number
+          stage_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      lead_team: {
+        Row: {
+          created_at: string | null
+          id: number
+          lead_id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          lead_id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          lead_id?: number | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_team_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_team_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leads: {
+        Row: {
+          client_company: string
+          client_industry: string | null
+          contact_address: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          estimated_value: number | null
+          id: number
+          meeting_notes: string | null
+          next_activity: string | null
+          owner_id: string | null
+          product_service_interest: string | null
+          stage_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_company: string
+          client_industry?: string | null
+          contact_address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          estimated_value?: number | null
+          id?: number
+          meeting_notes?: string | null
+          next_activity?: string | null
+          owner_id?: string | null
+          product_service_interest?: string | null
+          stage_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_company?: string
+          client_industry?: string | null
+          contact_address?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          estimated_value?: number | null
+          id?: number
+          meeting_notes?: string | null
+          next_activity?: string | null
+          owner_id?: string | null
+          product_service_interest?: string | null
+          stage_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leads_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "lead_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      master_settings: {
+        Row: {
+          description: string | null
+          id: number
+          setting_name: string
+          setting_value: string
+          updated_at: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: number
+          setting_name: string
+          setting_value: string
+          updated_at?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: number
+          setting_name?: string
+          setting_value?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: number
+          is_read: boolean | null
+          message: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          is_read?: boolean | null
+          message: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          is_read?: boolean | null
+          message?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          role_id: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id: string
+          name: string
+          role_id?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          role_id?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roles: {
+        Row: {
+          created_at: string | null
+          id: number
+          role_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          role_name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          role_name?: string
+        }
+        Relationships: []
+      }
+      scheduled_tasks: {
+        Row: {
+          created_at: string | null
+          id: number
+          lead_id: number | null
+          scheduled_date: string
+          status: Database["public"]["Enums"]["task_status"] | null
+          task_description: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          lead_id?: number | null
+          scheduled_date: string
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_description?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          lead_id?: number | null
+          scheduled_date?: string
+          status?: Database["public"]["Enums"]["task_status"] | null
+          task_description?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +383,16 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      lead_status:
+        | "new_lead"
+        | "contacted"
+        | "demo_given"
+        | "proposal_sent"
+        | "negotiation"
+        | "closed_won"
+        | "closed_lost"
+      task_status: "pending" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
