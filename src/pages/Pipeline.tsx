@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
@@ -40,7 +39,6 @@ const Pipeline = () => {
   const [sortBy, setSortBy] = useState<string>('newest');
   const { toast } = useToast();
   
-  // Group leads by status
   const leadsByStatus: Record<LeadStatus, Lead[]> = {
     new: [],
     contacted: [],
@@ -51,7 +49,6 @@ const Pipeline = () => {
     closed_lost: []
   };
   
-  // Filter and sort leads
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = searchTerm === '' || 
       lead.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -64,7 +61,6 @@ const Pipeline = () => {
     return matchesSearch && matchesStatus && matchesIndustry;
   });
   
-  // Sort leads
   const sortedLeads = [...filteredLeads].sort((a, b) => {
     switch (sortBy) {
       case 'newest':
@@ -82,7 +78,6 @@ const Pipeline = () => {
     }
   });
   
-  // Group the filtered & sorted leads by status
   sortedLeads.forEach(lead => {
     leadsByStatus[lead.status].push(lead);
   });
@@ -90,22 +85,18 @@ const Pipeline = () => {
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
     
-    // Dropped outside a droppable area
     if (!destination) return;
     
-    // Dropped in the same position
     if (
       source.droppableId === destination.droppableId &&
       source.index === destination.index
     ) return;
     
-    // Find the lead that was dragged
     const leadId = draggableId;
     const lead = leads.find(l => l.id === leadId);
     
     if (!lead) return;
     
-    // Update the lead's status
     const newStatus = destination.droppableId as LeadStatus;
     
     const updatedLeads = leads.map(l => 
@@ -445,7 +436,7 @@ const Pipeline = () => {
                       <div key={task.id} className="bg-muted p-3 rounded-md">
                         <div className="flex justify-between">
                           <p className="font-medium">{task.title}</p>
-                          <Badge variant={task.completed ? "success" : "outline"}>
+                          <Badge variant="outline">
                             {task.completed ? 'Completed' : 'Pending'}
                           </Badge>
                         </div>

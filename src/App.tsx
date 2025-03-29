@@ -12,6 +12,7 @@ import Leads from "./pages/Leads";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
+// Create a new QueryClient instance outside the component
 const queryClient = new QueryClient();
 
 const App = () => (

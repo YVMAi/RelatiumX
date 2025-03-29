@@ -1,4 +1,3 @@
-
 import { 
   User, 
   Lead, 
@@ -258,14 +257,6 @@ export const mockRevenueChartData: ChartData = {
       backgroundColor: 'rgba(59, 130, 246, 0.1)',
       borderWidth: 2,
       fill: true
-    },
-    {
-      label: 'Target (INR Cr)',
-      data: [15, 20, 22, 25, 30, 35],
-      borderColor: 'rgba(249, 115, 22, 0.8)',
-      backgroundColor: 'rgba(0, 0, 0, 0)',
-      borderWidth: 2,
-      borderDash: [5, 5]
     }
   ]
 };
