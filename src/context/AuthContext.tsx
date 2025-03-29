@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User, AuthError } from '@supabase/supabase-js';
@@ -18,6 +17,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (profile: Partial<Profile>) => Promise<{ error: Error | null }>;
   hasPermission: (action: string, resource: string) => boolean;
+  ensureDemoAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -113,6 +113,49 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error, user: data?.user ?? null };
   };
 
+  // Create demo account if it doesn't exist
+  const ensureDemoAccount = async () => {
+    // First check if the demo account exists by trying to sign in
+    const { error } = await supabase.auth.signInWithPassword({
+      email: 'admin@relatiumx.com',
+      password: 'password123',
+    });
+
+    // If login failed (account doesn't exist), create it
+    if (error) {
+      console.log('Demo account not found, creating it...');
+      const { error: signupError, user } = await signup('admin@relatiumx.com', 'password123', 'Demo Admin');
+      
+      if (signupError) {
+        console.error('Failed to create demo account:', signupError);
+        return;
+      }
+      
+      if (user) {
+        // Set the user as an admin (role_id = 1)
+        try {
+          // Wait for the profile to be created by the Supabase function
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update({ role_id: 1 })
+            .eq('id', user.id);
+          
+          if (updateError) {
+            console.error('Failed to set admin role:', updateError);
+          } else {
+            console.log('Demo admin account created successfully');
+          }
+        } catch (err) {
+          console.error('Error setting admin role:', err);
+        }
+      }
+    } else {
+      console.log('Demo account already exists');
+    }
+  };
+
   // Logout function
   const logout = async () => {
     await supabase.auth.signOut();
@@ -180,6 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     logout,
     updateProfile,
     hasPermission,
+    ensureDemoAccount,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

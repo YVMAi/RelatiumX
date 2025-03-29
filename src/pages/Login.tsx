@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,12 +11,32 @@ import { toast } from '@/hooks/use-toast';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, signup, isAuthenticated, loading } = useAuth();
+  const { login, signup, isAuthenticated, loading, ensureDemoAccount } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState('login');
+  const [isDemoAccountReady, setIsDemoAccountReady] = useState(false);
+
+  // Ensure demo account exists when component mounts
+  useEffect(() => {
+    const prepareDemo = async () => {
+      try {
+        await ensureDemoAccount();
+        setIsDemoAccountReady(true);
+      } catch (error) {
+        console.error("Error preparing demo account:", error);
+        toast({
+          title: "Demo Account Setup",
+          description: "There was an issue setting up the demo account. Regular login is still available.",
+          variant: "destructive",
+        });
+      }
+    };
+    
+    prepareDemo();
+  }, [ensureDemoAccount]);
 
   // Redirect if already authenticated
   if (isAuthenticated && !loading) {
@@ -118,7 +138,7 @@ const Login = () => {
     } catch (error: any) {
       toast({
         title: "Demo login failed",
-        description: "The demo account may not be set up. Please try regular login.",
+        description: error.message || "There was an issue with the demo account. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -255,8 +275,17 @@ const Login = () => {
                 <span className="bg-background px-2 text-muted-foreground">Or</span>
               </div>
             </div>
-            <Button variant="outline" className="w-full" onClick={loginWithDemoAccount} disabled={isSubmitting}>
-              Try with demo account
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={loginWithDemoAccount} 
+              disabled={isSubmitting || !isDemoAccountReady}
+            >
+              {!isDemoAccountReady 
+                ? "Preparing demo account..." 
+                : isSubmitting 
+                  ? "Logging in..." 
+                  : "Try with demo account"}
             </Button>
           </CardFooter>
         </Card>
