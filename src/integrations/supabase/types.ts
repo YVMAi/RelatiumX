@@ -92,6 +92,47 @@ export type Database = {
           },
         ]
       }
+      lead_contacts: {
+        Row: {
+          created_at: string | null
+          designation: string | null
+          email: string | null
+          id: string
+          lead_id: number | null
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          lead_id?: number | null
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          designation?: string | null
+          email?: string | null
+          id?: string
+          lead_id?: number | null
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lead_stages: {
         Row: {
           created_at: string | null
@@ -158,6 +199,7 @@ export type Database = {
           client_industry: string | null
           contact_address: string | null
           contact_email: string | null
+          contact_name: string | null
           contact_phone: string | null
           created_at: string | null
           estimated_value: number | null
@@ -166,14 +208,17 @@ export type Database = {
           next_activity: string | null
           owner_id: string | null
           product_service_interest: string | null
+          products: string[] | null
           stage_id: number | null
           updated_at: string | null
+          website: string | null
         }
         Insert: {
           client_company: string
           client_industry?: string | null
           contact_address?: string | null
           contact_email?: string | null
+          contact_name?: string | null
           contact_phone?: string | null
           created_at?: string | null
           estimated_value?: number | null
@@ -182,14 +227,17 @@ export type Database = {
           next_activity?: string | null
           owner_id?: string | null
           product_service_interest?: string | null
+          products?: string[] | null
           stage_id?: number | null
           updated_at?: string | null
+          website?: string | null
         }
         Update: {
           client_company?: string
           client_industry?: string | null
           contact_address?: string | null
           contact_email?: string | null
+          contact_name?: string | null
           contact_phone?: string | null
           created_at?: string | null
           estimated_value?: number | null
@@ -198,8 +246,10 @@ export type Database = {
           next_activity?: string | null
           owner_id?: string | null
           product_service_interest?: string | null
+          products?: string[] | null
           stage_id?: number | null
           updated_at?: string | null
+          website?: string | null
         }
         Relationships: [
           {

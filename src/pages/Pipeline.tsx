@@ -3,25 +3,13 @@ import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautif
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  ArrowUpDown, 
-  User, 
-  CalendarDays,
-  Building,
-  Mail,
-  Phone,
-  CreditCard,
-  Tag,
-  X
-} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Plus, Search, Filter, ArrowUpDown, User, CalendarDays, X } from 'lucide-react';
 import { Lead, LeadStatus } from '@/types';
 import { mockLeads } from '@/data/mockData';
 import { formatInrCrores, formatDate } from '@/utils/format';
@@ -30,14 +18,14 @@ import { useToast } from '@/hooks/use-toast';
 
 const Pipeline = () => {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterIndustry, setFilterIndustry] = useState<string>('all');
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
   const [sortBy, setSortBy] = useState<string>('newest');
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   
   const leadsByStatus: Record<LeadStatus, Lead[]> = {
     new: [],
@@ -111,9 +99,12 @@ const Pipeline = () => {
     });
   };
   
-  const openLeadPreview = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsPreviewOpen(true);
+  const openLeadDetails = (leadId: string) => {
+    navigate(`/leads/${leadId}`);
+  };
+  
+  const handleAddLead = () => {
+    navigate('/leads/new');
   };
   
   return (
@@ -126,7 +117,7 @@ const Pipeline = () => {
           </p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <Button>
+          <Button onClick={handleAddLead}>
             <Plus className="mr-2 h-4 w-4" />
             Add Lead
           </Button>
@@ -156,7 +147,7 @@ const Pipeline = () => {
           </Button>
           
           <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="w-36">
+            <SelectTrigger className="w-36 max-w-[120px] md:max-w-full">
               <div className="flex items-center">
                 <ArrowUpDown className="mr-2 h-4 w-4" />
                 <span>Sort</span>
@@ -233,11 +224,11 @@ const Pipeline = () => {
         </Card>
       )}
       
-      <div className="overflow-x-auto pb-4">
+      <div className={`overflow-x-auto pb-4 ${isMobile ? 'touch-pan-x' : ''}`}>
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4 min-w-max">
             {Object.entries(LEAD_STATUSES).map(([status, { label, color }]) => (
-              <div key={status} className="kanban-column">
+              <div key={status} className="kanban-column" style={{ minWidth: isMobile ? '260px' : '280px', maxWidth: '300px' }}>
                 <div className="flex items-center justify-between mb-3">
                   <h3 className={`font-medium ${color}`}>{label}</h3>
                   <Badge variant="outline">
@@ -261,8 +252,8 @@ const Pipeline = () => {
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
                                   {...provided.dragHandleProps}
-                                  onClick={() => openLeadPreview(lead)}
-                                  className="kanban-card"
+                                  onClick={() => openLeadDetails(lead.id)}
+                                  className="kanban-card cursor-pointer"
                                 >
                                   <div className="flex justify-between mb-2">
                                     <h4 className="font-medium">{lead.companyName}</h4>
@@ -313,151 +304,6 @@ const Pipeline = () => {
           </div>
         </DragDropContext>
       </div>
-      
-      {selectedLead && (
-        <Dialog open={isPreviewOpen} onOpenChange={setIsPreviewOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>{selectedLead.companyName}</DialogTitle>
-              <DialogDescription>Lead details and information</DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-3 max-h-[70vh] overflow-y-auto pr-2">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${LEAD_STATUSES[selectedLead.status].bgColor} ${LEAD_STATUSES[selectedLead.status].color}`}>
-                    {LEAD_STATUSES[selectedLead.status].label}
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-muted-foreground">Deal Value</p>
-                  <p className="font-medium">{formatInrCrores(selectedLead.value)}</p>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-3">
-                <h3 className="font-medium">Company Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-2">
-                    <Building className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Company</p>
-                      <p className="text-sm text-muted-foreground">{selectedLead.companyName}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Tag className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Industry</p>
-                      <p className="text-sm text-muted-foreground">{selectedLead.industry || 'Not specified'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <Separator />
-              
-              <div className="space-y-3">
-                <h3 className="font-medium">Contact Information</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="flex items-start gap-2">
-                    <User className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Contact Name</p>
-                      <p className="text-sm text-muted-foreground">{selectedLead.contactName}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">Email</p>
-                      <p className="text-sm text-muted-foreground">{selectedLead.contactEmail}</p>
-                    </div>
-                  </div>
-                  {selectedLead.contactPhone && (
-                    <div className="flex items-start gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium">Phone</p>
-                        <p className="text-sm text-muted-foreground">{selectedLead.contactPhone}</p>
-                      </div>
-                    </div>
-                  )}
-                  {selectedLead.website && (
-                    <div className="flex items-start gap-2">
-                      <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium">Website</p>
-                        <p className="text-sm text-muted-foreground">{selectedLead.website}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {selectedLead.notes && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Notes</h3>
-                    <p className="text-sm text-muted-foreground whitespace-pre-line">{selectedLead.notes}</p>
-                  </div>
-                </>
-              )}
-              
-              {selectedLead.tags.length > 0 && (
-                <>
-                  <Separator />
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Tags</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedLead.tags.map(tag => (
-                        <span
-                          key={tag.id}
-                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white ${tag.color}`}
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-              
-              <Separator />
-              
-              <div className="space-y-3">
-                <h3 className="font-medium">Tasks</h3>
-                {selectedLead.tasks && selectedLead.tasks.length > 0 ? (
-                  <div className="space-y-2">
-                    {selectedLead.tasks.map(task => (
-                      <div key={task.id} className="bg-muted p-3 rounded-md">
-                        <div className="flex justify-between">
-                          <p className="font-medium">{task.title}</p>
-                          <Badge variant="outline">
-                            {task.completed ? 'Completed' : 'Pending'}
-                          </Badge>
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground mt-1">{task.description}</p>
-                        )}
-                        <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                          <CalendarDays className="h-3 w-3" />
-                          <span>Due: {formatDate(task.dueDate)}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No tasks associated with this lead.</p>
-                )}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   );
 };

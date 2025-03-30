@@ -42,6 +42,7 @@ import { formatInrCrores, formatDate } from '@/utils/format';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   Plus,
   Search,
@@ -60,6 +61,7 @@ const Leads = () => {
   const { toast } = useToast();
   const { hasPermission, user } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const filteredLeads = leads.filter(
     (lead) =>
@@ -99,6 +101,64 @@ const Leads = () => {
       (hasPermission('delete:own', 'leads') && lead.createdBy === user?.id);
   };
 
+  // Function to render mobile lead cards
+  const renderMobileLeadCards = () => {
+    return filteredLeads.map(lead => (
+      <Card key={lead.id} className="mb-4">
+        <CardContent className="p-4">
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-medium">{lead.companyName}</h3>
+              <p className="text-sm text-muted-foreground">{lead.contactName}</p>
+            </div>
+            <Badge
+              variant="outline"
+              className={`${LEAD_STATUSES[lead.status].bgColor} ${LEAD_STATUSES[lead.status].color}`}
+            >
+              {LEAD_STATUSES[lead.status].label}
+            </Badge>
+          </div>
+          
+          <div className="flex justify-between items-center mt-3">
+            <div className="text-sm">{formatInrCrores(lead.value)}</div>
+            <div className="text-xs text-muted-foreground">{formatDate(lead.createdAt)}</div>
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-3">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => viewLeadDetails(lead.id)}
+            >
+              <Eye className="h-4 w-4 mr-1" /> View
+            </Button>
+            
+            {canEditLead(lead) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => navigate(`/leads/${lead.id}`)}
+              >
+                <Edit className="h-4 w-4 mr-1" /> Edit
+              </Button>
+            )}
+            
+            {canDeleteLead(lead) && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="text-destructive"
+                onClick={() => confirmDelete(lead)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" /> Delete
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    ));
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -136,107 +196,123 @@ const Leads = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <ScrollArea className="h-[60vh]">
-            <Table>
-              <TableHeader className="sticky top-0 bg-card z-10">
-                <TableRow>
-                  <TableHead className="w-[220px]">
-                    <div className="flex items-center">
-                      Company
-                      <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Value</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead) => (
-                    <TableRow key={lead.id}>
-                      <TableCell className="font-medium">
-                        {lead.companyName}
-                        {lead.industry && (
-                          <div className="text-xs text-muted-foreground mt-1">
-                            {lead.industry}
+          {isMobile ? (
+            <div className="p-4">
+              {filteredLeads.length > 0 ? 
+                renderMobileLeadCards() : 
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="mb-3 rounded-full bg-muted p-3">
+                    <Search className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground">
+                    No leads found. Try adjusting your search.
+                  </p>
+                </div>
+              }
+            </div>
+          ) : (
+            <ScrollArea className="h-[60vh]">
+              <Table>
+                <TableHeader className="sticky top-0 bg-card z-10">
+                  <TableRow>
+                    <TableHead className="w-[220px]">
+                      <div className="flex items-center">
+                        Company
+                        <ArrowUpDown className="ml-2 h-4 w-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Value</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredLeads.length > 0 ? (
+                    filteredLeads.map((lead) => (
+                      <TableRow key={lead.id}>
+                        <TableCell className="font-medium">
+                          {lead.companyName}
+                          {lead.industry && (
+                            <div className="text-xs text-muted-foreground mt-1">
+                              {lead.industry}
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div>{lead.contactName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {lead.contactEmail}
                           </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div>{lead.contactName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {lead.contactEmail}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="outline"
+                            className={`${LEAD_STATUSES[lead.status].bgColor} ${LEAD_STATUSES[lead.status].color}`}
+                          >
+                            {LEAD_STATUSES[lead.status].label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatInrCrores(lead.value)}
+                        </TableCell>
+                        <TableCell>{formatDate(lead.createdAt)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => viewLeadDetails(lead.id)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              
+                              {canEditLead(lead) && (
+                                <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
+                              
+                              <DropdownMenuSeparator />
+                              
+                              {canDeleteLead(lead) && (
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => confirmDelete(lead)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="mb-3 rounded-full bg-muted p-3">
+                            <Search className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                          <p className="text-muted-foreground">
+                            No leads found. Try adjusting your search.
+                          </p>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={`${LEAD_STATUSES[lead.status].bgColor} ${LEAD_STATUSES[lead.status].color}`}
-                        >
-                          {LEAD_STATUSES[lead.status].label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatInrCrores(lead.value)}
-                      </TableCell>
-                      <TableCell>{formatDate(lead.createdAt)}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => viewLeadDetails(lead.id)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </DropdownMenuItem>
-                            
-                            {canEditLead(lead) && (
-                              <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            
-                            <DropdownMenuSeparator />
-                            
-                            {canDeleteLead(lead) && (
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => confirmDelete(lead)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div className="flex flex-col items-center justify-center">
-                        <div className="mb-3 rounded-full bg-muted p-3">
-                          <Search className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <p className="text-muted-foreground">
-                          No leads found. Try adjusting your search.
-                        </p>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          )}
         </CardContent>
       </Card>
 

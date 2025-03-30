@@ -20,32 +20,24 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Lead, LeadTag } from '@/types';
+import { Lead, LeadTag, LeadContact } from '@/types';
 import { INDUSTRY_OPTIONS, LEAD_STATUSES, DEFAULT_LEAD_TAGS, LEAD_SCORE_OPTIONS } from '@/utils/constants';
-import { ArrowLeft, Plus, Trash2, Calendar, Users } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { mockLeads } from '@/data/mockData';
 import { ContactSection } from '@/components/leads/ContactSection';
 import { ProductServicesSection } from '@/components/leads/ProductServicesSection';
 import { TeamSection } from '@/components/leads/TeamSection';
 import { NextStepsSection } from '@/components/leads/NextStepsSection';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const LeadForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   
   const [isLoading, setIsLoading] = useState(false);
   const [lead, setLead] = useState<Partial<Lead>>({
@@ -110,7 +102,7 @@ const LeadForm = () => {
         <Button 
           variant="ghost" 
           size="icon" 
-          onClick={() => navigate('/leads')}
+          onClick={() => navigate(-1)}
         >
           <ArrowLeft />
         </Button>
@@ -250,7 +242,7 @@ const LeadForm = () => {
       <div className="flex justify-end gap-3">
         <Button
           variant="outline"
-          onClick={() => navigate('/leads')}
+          onClick={() => navigate(-1)}
         >
           Cancel
         </Button>

@@ -1,4 +1,3 @@
-
 export type UserRole = 'admin' | 'user';
 
 export interface User {
@@ -90,4 +89,31 @@ export interface ChartData {
     borderWidth?: number;
     fill?: boolean;
   }[];
+}
+
+export interface LeadContact {
+  id?: string;
+  lead_id?: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  designation?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LeadInsert {
+  client_company: string;
+  client_industry?: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  contact_address?: string;
+  website?: string;
+  products?: string[];
+  estimated_value?: number;
+  owner_id?: string;
+  stage_id?: number;
+  meeting_notes?: string;
+  next_activity?: string;
 }
