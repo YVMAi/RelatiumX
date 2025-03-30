@@ -11,7 +11,6 @@ export const AppLayout = () => {
   const isMobile = useIsMobile();
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-  const { state: sidebarState } = useSidebar();
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
 
   // Update sidebar state when mobile status changes

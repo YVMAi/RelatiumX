@@ -21,8 +21,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
 
@@ -63,6 +61,7 @@ export const Sidebar = () => {
         <button 
           onClick={toggleSidebar}
           className="p-1 rounded-md hover:bg-sidebar-accent text-sidebar-foreground"
+          aria-label={state === "collapsed" ? "Expand sidebar" : "Collapse sidebar"}
         >
           {state === "collapsed" ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
         </button>
