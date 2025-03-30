@@ -1,16 +1,23 @@
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 
 export const AppLayout = () => {
   const isMobile = useIsMobile();
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
+  const { state: sidebarState } = useSidebar();
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+
+  // Update sidebar state when mobile status changes
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   if (loading) {
     return (
@@ -30,7 +37,7 @@ export const AppLayout = () => {
         <Sidebar />
         
         <div className="flex flex-col flex-1 overflow-hidden">
-          <Navbar />
+          <Navbar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
           
           <main className="flex-1 overflow-y-auto p-3 md:p-6">
             <div className="mx-auto max-w-7xl">

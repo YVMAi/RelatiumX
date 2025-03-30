@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { NotificationsDropdown } from '@/components/notifications/NotificationsDropdown';
+import { Link } from 'react-router-dom';
 import { 
   Menu, 
   Bell, 
@@ -22,8 +23,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials } from '@/utils/format';
+import { useSidebar } from '@/components/ui/sidebar';
 
-interface NavbarProps {
+export interface NavbarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 }
@@ -31,6 +33,12 @@ interface NavbarProps {
 export const Navbar = ({ sidebarOpen, setSidebarOpen }: NavbarProps) => {
   const { user, profile, logout, isAdmin } = useAuth();
   const [searchVisible, setSearchVisible] = useState(false);
+  const { toggleSidebar } = useSidebar();
+  
+  const handleToggleSidebar = () => {
+    toggleSidebar();
+    setSidebarOpen(!sidebarOpen);
+  };
   
   return (
     <header className="bg-background border-b h-16 shadow-sm flex items-center px-4 sticky top-0 z-30">
@@ -38,7 +46,7 @@ export const Navbar = ({ sidebarOpen, setSidebarOpen }: NavbarProps) => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setSidebarOpen(!sidebarOpen)}
+          onClick={handleToggleSidebar}
           className="md:hidden"
         >
           <Menu />
@@ -101,9 +109,11 @@ export const Navbar = ({ sidebarOpen, setSidebarOpen }: NavbarProps) => {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+              <DropdownMenuItem asChild>
+                <Link to="/profile">
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </Link>
               </DropdownMenuItem>
               {isAdmin && (
                 <DropdownMenuItem>
