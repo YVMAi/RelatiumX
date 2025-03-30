@@ -38,6 +38,7 @@ const App = () => {
                   <Route path="settings" element={<Settings />} />
                   <Route path="profile" element={<Profile />} />
                   <Route path="reports" element={<Reports />} />
+                  <Route path="chat" element={<div className="p-4">Chat Component Coming Soon</div>} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
