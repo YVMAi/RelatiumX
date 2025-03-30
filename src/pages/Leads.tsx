@@ -35,13 +35,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import LeadForm from '@/components/leads/LeadForm';
 import { Lead } from '@/types';
 import { mockLeads } from '@/data/mockData';
 import { LEAD_STATUSES } from '@/utils/constants';
 import { formatInrCrores, formatDate } from '@/utils/format';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   Search,
@@ -50,19 +50,16 @@ import {
   Trash2,
   Eye,
   ArrowUpDown,
-  Check,
-  CheckCircle,
-  CircleX,
 } from 'lucide-react';
 
 const Leads = () => {
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const { toast } = useToast();
   const { hasPermission, user } = useAuth();
+  const navigate = useNavigate();
 
   const filteredLeads = leads.filter(
     (lead) =>
@@ -70,27 +67,6 @@ const Leads = () => {
       lead.contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.contactEmail.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleCreateLead = (newLead: Lead) => {
-    setLeads([...leads, { ...newLead, createdBy: user?.id || '' }]);
-    setIsFormOpen(false);
-    toast({
-      title: 'Lead Created',
-      description: `Successfully created lead for ${newLead.companyName}`,
-    });
-  };
-
-  const handleUpdateLead = (updatedLead: Lead) => {
-    setLeads(
-      leads.map((lead) => (lead.id === updatedLead.id ? updatedLead : lead))
-    );
-    setSelectedLead(null);
-    setIsFormOpen(false);
-    toast({
-      title: 'Lead Updated',
-      description: `Successfully updated lead for ${updatedLead.companyName}`,
-    });
-  };
 
   const handleDeleteLead = () => {
     if (!selectedLead) return;
@@ -104,14 +80,13 @@ const Leads = () => {
     });
   };
 
-  const openEditForm = (lead: Lead) => {
-    setSelectedLead(lead);
-    setIsFormOpen(true);
-  };
-
   const confirmDelete = (lead: Lead) => {
     setSelectedLead(lead);
     setIsDeleteDialogOpen(true);
+  };
+
+  const viewLeadDetails = (leadId: string) => {
+    navigate(`/leads/${leadId}`);
   };
 
   const canEditLead = (lead: Lead) => {
@@ -134,7 +109,7 @@ const Leads = () => {
           </p>
         </div>
         <div>
-          <Button onClick={() => setIsFormOpen(true)}>
+          <Button onClick={() => navigate('/leads/new')}>
             <Plus className="mr-2 h-4 w-4" />
             Add Lead
           </Button>
@@ -217,13 +192,13 @@ const Leads = () => {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => openEditForm(lead)}>
+                            <DropdownMenuItem onClick={() => viewLeadDetails(lead.id)}>
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
                             
                             {canEditLead(lead) && (
-                              <DropdownMenuItem onClick={() => openEditForm(lead)}>
+                              <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
@@ -264,30 +239,6 @@ const Leads = () => {
           </ScrollArea>
         </CardContent>
       </Card>
-
-      {/* Create/Edit Lead Dialog */}
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedLead ? 'Edit Lead' : 'Create New Lead'}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedLead
-                ? 'Update the details for this lead.'
-                : 'Fill in the information to add a new lead.'}
-            </DialogDescription>
-          </DialogHeader>
-          <LeadForm
-            lead={selectedLead || undefined}
-            onSubmit={selectedLead ? handleUpdateLead : handleCreateLead}
-            onCancel={() => {
-              setIsFormOpen(false);
-              setSelectedLead(null);
-            }}
-          />
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
