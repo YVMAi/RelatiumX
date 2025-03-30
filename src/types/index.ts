@@ -27,6 +27,15 @@ export interface Task {
   assignedTo?: string;
 }
 
+export interface ContactDetail {
+  id: string;
+  type: 'email' | 'phone' | 'address' | 'website' | 'social';
+  value: string;
+  label?: string; // e.g., "Work", "Personal", "Mobile"
+  isPrimary?: boolean;
+  socialPlatform?: 'linkedin' | 'twitter' | 'facebook' | 'instagram' | 'other';
+}
+
 export interface Lead {
   id: string;
   companyName: string;
@@ -34,11 +43,13 @@ export interface Lead {
   contactName: string;
   contactEmail: string;
   contactPhone?: string;
+  contactDetails?: ContactDetail[];
   status: LeadStatus;
   value: number; // Value in INR crores
   tags: LeadTag[];
   createdBy: string;
   assignedTo?: string;
+  teamMembers?: string[];
   createdAt: Date | string;
   updatedAt: Date | string;
   notes?: string;

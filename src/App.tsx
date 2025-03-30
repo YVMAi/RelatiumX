@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +14,6 @@ import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-// Create a new QueryClient instance outside the component
 const queryClient = new QueryClient();
 
 const App = () => {
@@ -31,10 +29,12 @@ const App = () => {
                 <Route path="/login" element={<Login />} />
                 <Route path="/" element={<AppLayout />}>
                   <Route index element={<Dashboard />} />
-                  <Route path="pipeline" element={<Pipeline />} />
                   <Route path="leads" element={<Leads />} />
+                  <Route path="pipeline" element={<Pipeline />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="settings" element={<Settings />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="reports" element={<Reports />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

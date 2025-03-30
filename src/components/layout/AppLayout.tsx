@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -11,16 +11,6 @@ export const AppLayout = () => {
   const isMobile = useIsMobile();
   const { isAuthenticated, loading } = useAuth();
   const location = useLocation();
-  
-  // For mobile sidebar control
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // Close sidebar when changing routes on mobile
-  useEffect(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  }, [location.pathname, isMobile]);
 
   if (loading) {
     return (
@@ -37,13 +27,10 @@ export const AppLayout = () => {
   return (
     <SidebarProvider defaultOpen={!isMobile}>
       <div className="flex h-screen w-full bg-background overflow-hidden">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar />
         
         <div className="flex flex-col flex-1 overflow-hidden">
-          <Navbar 
-            sidebarOpen={sidebarOpen} 
-            setSidebarOpen={setSidebarOpen} 
-          />
+          <Navbar />
           
           <main className="flex-1 overflow-y-auto p-3 md:p-6">
             <div className="mx-auto max-w-7xl">

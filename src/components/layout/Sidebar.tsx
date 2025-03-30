@@ -26,11 +26,6 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 
-interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
 interface SidebarItem {
   title: string;
   icon: LucideIcon;
@@ -38,7 +33,7 @@ interface SidebarItem {
   requireAdmin?: boolean;
 }
 
-export const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
+export const Sidebar = () => {
   const location = useLocation();
   const { isAdmin } = useAuth();
   const { state, toggleSidebar } = useSidebar();

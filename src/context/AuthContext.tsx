@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User, AuthError } from '@supabase/supabase-js';
@@ -18,6 +19,7 @@ interface AuthContextType {
   updateProfile: (profile: Partial<Profile>) => Promise<{ error: Error | null }>;
   hasPermission: (action: string, resource: string) => boolean;
   ensureDemoAccount: () => Promise<void>;
+  updatePassword: (currentPassword: string, newPassword: string) => Promise<{ error: AuthError | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -161,6 +163,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  // Update password
+  const updatePassword = async (currentPassword: string, newPassword: string) => {
+    if (!user) return { error: new Error('Not authenticated') as unknown as AuthError };
+    
+    try {
+      // First verify the current password by attempting to sign in
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: currentPassword,
+      });
+      
+      if (verifyError) {
+        return { error: verifyError };
+      }
+      
+      // Then update to the new password
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      return { error };
+    } catch (error) {
+      console.error('Error updating password:', error);
+      return { error: error as AuthError };
+    }
+  };
+
   // Update profile
   const updateProfile = async (profileData: Partial<Profile>) => {
     if (!user) return { error: new Error('Not authenticated') };
@@ -224,6 +253,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     updateProfile,
     hasPermission,
     ensureDemoAccount,
+    updatePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
