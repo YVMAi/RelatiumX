@@ -10,23 +10,24 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ContactDetail } from '@/types/contact';
+import { LeadContact } from '@/types';
 import { Plus, Trash2 } from 'lucide-react';
 
 type ContactSectionProps = {
-  contacts: ContactDetail[];
-  setContacts: (contacts: ContactDetail[]) => void;
+  contacts: Partial<LeadContact>[];
+  setContacts: (contacts: Partial<LeadContact>[]) => void;
 };
 
 export const ContactSection = ({ contacts, setContacts }: ContactSectionProps) => {
   const [showAddForm, setShowAddForm] = useState(false);
   
   const addEmptyContact = () => {
-    const newContact: ContactDetail = {
+    const newContact: Partial<LeadContact> = {
       id: `contact-${Date.now()}`,
-      type: 'email',
-      value: '',
-      label: '',
+      name: '',
+      email: '',
+      phone: '',
+      designation: '',
     };
     
     setContacts([...contacts, newContact]);
@@ -91,8 +92,8 @@ export const ContactSection = ({ contacts, setContacts }: ContactSectionProps) =
                   <Label htmlFor={`contact-name-${index}`}>Name</Label>
                   <Input
                     id={`contact-name-${index}`}
-                    value={contact.label || ''}
-                    onChange={(e) => updateContact(index, 'label', e.target.value)}
+                    value={contact.name || ''}
+                    onChange={(e) => updateContact(index, 'name', e.target.value)}
                     placeholder="Contact name"
                   />
                 </div>
@@ -101,8 +102,8 @@ export const ContactSection = ({ contacts, setContacts }: ContactSectionProps) =
                   <Label htmlFor={`contact-designation-${index}`}>Designation</Label>
                   <Input
                     id={`contact-designation-${index}`}
-                    value={contact.socialPlatform || ''}
-                    onChange={(e) => updateContact(index, 'socialPlatform', e.target.value)}
+                    value={contact.designation || ''}
+                    onChange={(e) => updateContact(index, 'designation', e.target.value)}
                     placeholder="Job title"
                   />
                 </div>
@@ -112,8 +113,8 @@ export const ContactSection = ({ contacts, setContacts }: ContactSectionProps) =
                   <Input
                     id={`contact-email-${index}`}
                     type="email"
-                    value={contact.value || ''}
-                    onChange={(e) => updateContact(index, 'value', e.target.value)}
+                    value={contact.email || ''}
+                    onChange={(e) => updateContact(index, 'email', e.target.value)}
                     placeholder="contact@example.com"
                   />
                 </div>
@@ -122,8 +123,8 @@ export const ContactSection = ({ contacts, setContacts }: ContactSectionProps) =
                   <Label htmlFor={`contact-phone-${index}`}>Phone</Label>
                   <Input
                     id={`contact-phone-${index}`}
-                    value={contact.isPrimary ? `${contact.isPrimary}` : ''}
-                    onChange={(e) => updateContact(index, 'isPrimary', e.target.value)}
+                    value={contact.phone || ''}
+                    onChange={(e) => updateContact(index, 'phone', e.target.value)}
                     placeholder="+91 98765 43210"
                   />
                 </div>
