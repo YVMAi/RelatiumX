@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Lead, LeadTag, LeadContact, LeadInsert } from '@/types';
+import { Lead, LeadTag, LeadContact, LeadInsert, Task } from '@/types';
 import { INDUSTRY_OPTIONS, LEAD_STATUSES, DEFAULT_LEAD_TAGS, LEAD_SCORE_OPTIONS } from '@/utils/constants';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { ContactSection } from '@/components/leads/ContactSection';
@@ -30,7 +30,7 @@ import { ProductServicesSection } from '@/components/leads/ProductServicesSectio
 import { TeamSection } from '@/components/leads/TeamSection';
 import { NextStepsSection } from '@/components/leads/NextStepsSection';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { createLead, fetchLeadById, updateLead, saveLeadContacts } from '@/services/leadsService';
+import { createLead, fetchLeadById, updateLead, saveLeadContacts, fetchLeadTeamMembers } from '@/services/leadsService';
 import { leadService } from '@/services/api';
 
 const LeadForm = () => {
@@ -41,7 +41,6 @@ const LeadForm = () => {
   const isMobile = useIsMobile();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [contacts, setContacts] = useState<LeadContact[]>([]);
   const [lead, setLead] = useState<Partial<LeadInsert>>({
     client_company: '',
     client_industry: '',
@@ -54,6 +53,7 @@ const LeadForm = () => {
   const [selectedOwner, setSelectedOwner] = useState<string>(user?.id || '');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   
   // Fetch lead data if editing an existing lead
   useEffect(() => {
@@ -91,10 +91,11 @@ const LeadForm = () => {
                 setLeadContacts(leadData.lead_contacts);
               }
               
-              // Set team members if available (if lead_team was included in the query)
-              if (leadData.team) {
-                const teamMembers = leadData.team.map((member: any) => member.user_id);
-                setSelectedMembers(teamMembers);
+              // Fetch team members for this lead
+              const teamMembers = await fetchLeadTeamMembers(numericId);
+              if (teamMembers && teamMembers.length > 0) {
+                const teamMemberIds = teamMembers.map((member: any) => member.user_id);
+                setSelectedMembers(teamMemberIds);
               }
             }
           }
@@ -383,6 +384,11 @@ const LeadForm = () => {
           selectedMembers={selectedMembers}
           onOwnerChange={setSelectedOwner}
           onMembersChange={setSelectedMembers}
+        />
+
+        <NextStepsSection 
+          tasks={tasks}
+          onChange={setTasks}
         />
       </div>
 

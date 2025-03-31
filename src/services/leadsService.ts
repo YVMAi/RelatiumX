@@ -51,6 +51,25 @@ export const fetchLeadById = async (id: number) => {
   }
 };
 
+export const fetchLeadTeamMembers = async (leadId: number) => {
+  try {
+    const { data, error } = await supabase
+      .from('lead_team')
+      .select('*')
+      .eq('lead_id', leadId);
+
+    if (error) {
+      console.error('Error fetching lead team members:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchLeadTeamMembers:', error);
+    return [];
+  }
+};
+
 export const createLead = async (lead: LeadInsert) => {
   const { data, error } = await supabase
     .from('leads')
@@ -102,23 +121,29 @@ export const saveLeadContacts = async (leadId: number, contacts: Partial<LeadCon
   
   if (toInsert.length > 0) {
     // Make sure all contacts have required fields
-    const validContacts = toInsert.filter(c => c.name);
+    const validContacts = toInsert.filter(c => c.name && c.name.trim() !== '');
     if (validContacts.length > 0) {
+      const contactsWithLeadId = validContacts.map(c => ({ 
+        ...c, 
+        lead_id: leadId,
+        name: c.name || 'Unknown' // Ensure name is always provided
+      }));
+      
       promises.push(
         supabase
           .from('lead_contacts')
-          .insert(validContacts.map(c => ({ ...c, lead_id: leadId })))
+          .insert(contactsWithLeadId)
       );
     }
   }
   
-  toUpdate.forEach(contact => {
-    if (contact.name) {
+  for (const contact of toUpdate) {
+    if (contact.id && (contact.name && contact.name.trim() !== '')) {
       promises.push(
         supabase
           .from('lead_contacts')
           .update({ 
-            name: contact.name,
+            name: contact.name || 'Unknown', // Ensure name is always provided
             email: contact.email,
             phone: contact.phone,
             designation: contact.designation,
@@ -127,7 +152,7 @@ export const saveLeadContacts = async (leadId: number, contacts: Partial<LeadCon
           .eq('id', contact.id)
       );
     }
-  });
+  }
   
   if (toDelete.length > 0) {
     promises.push(

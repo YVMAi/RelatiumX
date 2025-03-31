@@ -84,7 +84,7 @@ export const TeamSection = ({
             onValueChange={onOwnerChange}
             disabled={isLoading}
           >
-            <SelectTrigger>
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={isLoading ? "Loading..." : "Select lead owner"} />
             </SelectTrigger>
             <SelectContent>

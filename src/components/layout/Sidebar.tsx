@@ -41,7 +41,7 @@ interface SidebarProps {
 
 export const Sidebar = ({ isCollapsed, isOpen }: SidebarProps) => {
   const location = useLocation();
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, user, logout } = useAuth();
   const { state } = useSidebar();
   
   const sidebarItems: SidebarItem[] = [
@@ -50,9 +50,10 @@ export const Sidebar = ({ isCollapsed, isOpen }: SidebarProps) => {
     { title: 'Leads Management', icon: ClipboardList, href: '/leads', category: 'OVERVIEW', badge: 3 },
     { title: 'User Management', icon: Users, href: '/users', requireAdmin: true, category: 'OVERVIEW' },
     { title: 'Chat', icon: MessageCircle, href: '/chat', category: 'ACCOUNT' },
-    { title: 'Settings', icon: Settings, href: '/settings', category: 'ACCOUNT' },
+    { title: 'Settings', icon: Settings, href: '/settings', requireAdmin: true, category: 'ACCOUNT' },
   ];
 
+  // Filter out admin-only items if not admin
   const filteredItems = sidebarItems.filter(item => !item.requireAdmin || isAdmin);
   
   // Group items by category
