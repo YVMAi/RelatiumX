@@ -18,7 +18,14 @@ import Profile from "./pages/Profile";
 import Reports from "./pages/Reports";
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1
+    }
+  }
+});
 
 const App = () => {
   return (

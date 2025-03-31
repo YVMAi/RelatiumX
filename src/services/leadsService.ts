@@ -21,7 +21,7 @@ export const fetchLeads = async () => {
   return data || [];
 };
 
-export const fetchLeadById = async (id: string) => {
+export const fetchLeadById = async (id: number) => {
   const { data, error } = await supabase
     .from('leads')
     .select(`
@@ -56,7 +56,7 @@ export const createLead = async (lead: LeadInsert) => {
   return data;
 };
 
-export const updateLead = async (id: string, updates: Partial<Lead>) => {
+export const updateLead = async (id: number, updates: Partial<LeadInsert>) => {
   const { data, error } = await supabase
     .from('leads')
     .update(updates)
@@ -91,26 +91,32 @@ export const saveLeadContacts = async (leadId: number, contacts: Partial<LeadCon
   const promises = [];
   
   if (toInsert.length > 0) {
-    promises.push(
-      supabase
-        .from('lead_contacts')
-        .insert(toInsert.map(c => ({ ...c, lead_id: leadId })))
-    );
+    // Make sure all contacts have required fields
+    const validContacts = toInsert.filter(c => c.name);
+    if (validContacts.length > 0) {
+      promises.push(
+        supabase
+          .from('lead_contacts')
+          .insert(validContacts.map(c => ({ ...c, lead_id: leadId })))
+      );
+    }
   }
   
   toUpdate.forEach(contact => {
-    promises.push(
-      supabase
-        .from('lead_contacts')
-        .update({ 
-          name: contact.name,
-          email: contact.email,
-          phone: contact.phone,
-          designation: contact.designation,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', contact.id)
-    );
+    if (contact.name) {
+      promises.push(
+        supabase
+          .from('lead_contacts')
+          .update({ 
+            name: contact.name,
+            email: contact.email,
+            phone: contact.phone,
+            designation: contact.designation,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', contact.id)
+      );
+    }
   });
   
   if (toDelete.length > 0) {
@@ -137,7 +143,7 @@ export const saveLeadContacts = async (leadId: number, contacts: Partial<LeadCon
   return data;
 };
 
-export const deleteLeadById = async (id: string) => {
+export const deleteLeadById = async (id: number) => {
   const { error } = await supabase
     .from('leads')
     .delete()
@@ -147,4 +153,57 @@ export const deleteLeadById = async (id: string) => {
     console.error('Error deleting lead:', error);
     throw error;
   }
+};
+
+// New functions for user and team data
+export const fetchUsers = async () => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .order('name', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching users:', error);
+    throw error;
+  }
+
+  return data || [];
+};
+
+// Search function
+export const globalSearch = async (searchTerm: string) => {
+  if (!searchTerm || searchTerm.trim().length < 2) {
+    return { leads: [], users: [] };
+  }
+
+  // Search in leads
+  const { data: leadsData, error: leadsError } = await supabase
+    .from('leads')
+    .select(`
+      *,
+      profiles(name, email),
+      lead_stages(*)
+    `)
+    .or(`client_company.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%,contact_email.ilike.%${searchTerm}%`)
+    .limit(10);
+
+  if (leadsError) {
+    console.error('Error searching leads:', leadsError);
+  }
+
+  // Search in users
+  const { data: usersData, error: usersError } = await supabase
+    .from('profiles')
+    .select('*')
+    .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+    .limit(10);
+
+  if (usersError) {
+    console.error('Error searching users:', usersError);
+  }
+
+  return {
+    leads: leadsData || [],
+    users: usersData || []
+  };
 };

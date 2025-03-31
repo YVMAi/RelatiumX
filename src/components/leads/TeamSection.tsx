@@ -15,19 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { User } from '@/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
-// Mock users data
-const MOCK_USERS: User[] = [
-  { id: 'user-1', name: 'John Doe', email: 'john@example.com', role: 'admin', avatar: '/placeholder.svg' },
-  { id: 'user-2', name: 'Jane Smith', email: 'jane@example.com', role: 'user', avatar: '/placeholder.svg' },
-  { id: 'user-3', name: 'Robert Johnson', email: 'robert@example.com', role: 'user', avatar: '/placeholder.svg' },
-  { id: 'user-4', name: 'Sarah Williams', email: 'sarah@example.com', role: 'user', avatar: '/placeholder.svg' },
-  { id: 'user-5', name: 'Michael Brown', email: 'michael@example.com', role: 'user', avatar: '/placeholder.svg' },
-];
+import { fetchUsers } from '@/services/leadsService';
 
 type TeamSectionProps = {
   selectedOwner?: string;
@@ -42,11 +33,23 @@ export const TeamSection = ({
   onOwnerChange,
   onMembersChange,
 }: TeamSectionProps) => {
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // In a real app, this would fetch users from an API
   useEffect(() => {
-    setUsers(MOCK_USERS);
+    const loadUsers = async () => {
+      setIsLoading(true);
+      try {
+        const userData = await fetchUsers();
+        setUsers(userData);
+      } catch (error) {
+        console.error('Error loading users:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadUsers();
   }, []);
 
   const toggleTeamMember = (userId: string) => {
@@ -71,17 +74,17 @@ export const TeamSection = ({
           <Select
             value={selectedOwner}
             onValueChange={onOwnerChange}
+            disabled={isLoading}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select lead owner" />
+              <SelectValue placeholder={isLoading ? "Loading..." : "Select lead owner"} />
             </SelectTrigger>
             <SelectContent>
               {users.map(user => (
                 <SelectItem key={user.id} value={user.id}>
                   <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{user.name ? user.name.charAt(0) : '?'}</AvatarFallback>
                     </Avatar>
                     {user.name}
                   </div>
@@ -93,34 +96,39 @@ export const TeamSection = ({
 
         <div className="space-y-2">
           <Label>Team Members</Label>
-          <ScrollArea className="h-[200px] border rounded-md p-2">
-            <div className="space-y-2">
-              {users.map(user => (
-                <div key={user.id} className="flex items-center space-x-2 py-1">
-                  <Checkbox
-                    id={`member-${user.id}`}
-                    checked={selectedMembers.includes(user.id)}
-                    onCheckedChange={() => toggleTeamMember(user.id)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={user.avatar} />
-                      <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <Label
-                      htmlFor={`member-${user.id}`}
-                      className="text-sm font-normal cursor-pointer"
-                    >
-                      {user.name}
-                      <span className="text-xs text-muted-foreground block">
-                        {user.email}
-                      </span>
-                    </Label>
-                  </div>
-                </div>
-              ))}
+          {isLoading ? (
+            <div className="flex items-center justify-center h-[200px] border rounded-md p-2">
+              <p className="text-muted-foreground">Loading users...</p>
             </div>
-          </ScrollArea>
+          ) : (
+            <ScrollArea className="h-[200px] border rounded-md p-2">
+              <div className="space-y-2">
+                {users.map(user => (
+                  <div key={user.id} className="flex items-center space-x-2 py-1">
+                    <Checkbox
+                      id={`member-${user.id}`}
+                      checked={selectedMembers.includes(user.id)}
+                      onCheckedChange={() => toggleTeamMember(user.id)}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-6 w-6">
+                        <AvatarFallback>{user.name ? user.name.charAt(0) : '?'}</AvatarFallback>
+                      </Avatar>
+                      <Label
+                        htmlFor={`member-${user.id}`}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {user.name}
+                        <span className="text-xs text-muted-foreground block">
+                          {user.email}
+                        </span>
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
         </div>
       </CardContent>
     </Card>

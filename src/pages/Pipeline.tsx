@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,13 +12,15 @@ import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Plus, Search, Filter, ArrowUpDown, User, CalendarDays, X } from 'lucide-react';
 import { Lead, LeadStatus } from '@/types';
-import { mockLeads } from '@/data/mockData';
 import { formatInrCrores, formatDate } from '@/utils/format';
 import { LEAD_STATUSES, INDUSTRY_OPTIONS } from '@/utils/constants';
 import { useToast } from '@/hooks/use-toast';
+import { fetchLeads, updateLead } from '@/services/leadsService';
+import { GlobalSearch } from '@/components/search/GlobalSearch';
 
 const Pipeline = () => {
-  const [leads, setLeads] = useState<Lead[]>(mockLeads);
+  const [leads, setLeads] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterIndustry, setFilterIndustry] = useState<string>('all');
@@ -27,24 +30,47 @@ const Pipeline = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   
-  const leadsByStatus: Record<LeadStatus, Lead[]> = {
-    new: [],
-    contacted: [],
-    demo: [],
-    proposal: [],
-    negotiation: [],
-    closed_won: [],
-    closed_lost: []
+  // Fetch leads from the database
+  useEffect(() => {
+    const loadLeads = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchLeads();
+        setLeads(data);
+      } catch (error) {
+        console.error('Error fetching leads:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load leads data',
+          variant: 'destructive'
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadLeads();
+  }, [toast]);
+  
+  // Group leads by status
+  const leadsByStatus: Record<string, any[]> = {
+    '1': [], // new
+    '2': [], // contacted
+    '3': [], // demo
+    '4': [], // proposal
+    '5': [], // negotiation
+    '6': [], // closed_won
+    '7': []  // closed_lost
   };
   
   const filteredLeads = leads.filter(lead => {
     const matchesSearch = searchTerm === '' || 
-      lead.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.contactName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.contactEmail.toLowerCase().includes(searchTerm.toLowerCase());
+      lead.client_company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.contact_email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = filterStatus === 'all' || lead.status === filterStatus;
-    const matchesIndustry = filterIndustry === 'all' || lead.industry === filterIndustry;
+    const matchesStatus = filterStatus === 'all' || lead.stage_id?.toString() === filterStatus;
+    const matchesIndustry = filterIndustry === 'all' || lead.client_industry === filterIndustry;
     
     return matchesSearch && matchesStatus && matchesIndustry;
   });
@@ -52,25 +78,43 @@ const Pipeline = () => {
   const sortedLeads = [...filteredLeads].sort((a, b) => {
     switch (sortBy) {
       case 'newest':
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'oldest':
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       case 'valueHighToLow':
-        return b.value - a.value;
+        return (b.estimated_value || 0) - (a.estimated_value || 0);
       case 'valueLowToHigh':
-        return a.value - b.value;
+        return (a.estimated_value || 0) - (b.estimated_value || 0);
       case 'alphabetical':
-        return a.companyName.localeCompare(b.companyName);
+        return a.client_company.localeCompare(b.client_company);
       default:
         return 0;
     }
   });
   
+  // Group leads by stage_id
   sortedLeads.forEach(lead => {
-    leadsByStatus[lead.status].push(lead);
+    const stageId = lead.stage_id?.toString() || '1';
+    if (leadsByStatus[stageId]) {
+      leadsByStatus[stageId].push(lead);
+    } else {
+      leadsByStatus['1'].push(lead);
+    }
   });
   
-  const handleDragEnd = (result: DropResult) => {
+  const getStatusName = (stageId: string) => {
+    const index = parseInt(stageId) - 1;
+    const statuses = Object.values(LEAD_STATUSES);
+    return statuses[index]?.label || 'Unknown';
+  };
+  
+  const getStatusColor = (stageId: string) => {
+    const index = parseInt(stageId) - 1;
+    const statuses = Object.values(LEAD_STATUSES);
+    return statuses[index]?.color || '';
+  };
+  
+  const handleDragEnd = async (result: DropResult) => {
     const { source, destination, draggableId } = result;
     
     if (!destination) return;
@@ -80,32 +124,56 @@ const Pipeline = () => {
       source.index === destination.index
     ) return;
     
-    const leadId = draggableId;
+    const leadId = parseInt(draggableId);
     const lead = leads.find(l => l.id === leadId);
     
     if (!lead) return;
     
-    const newStatus = destination.droppableId as LeadStatus;
+    const newStageId = parseInt(destination.droppableId);
     
-    const updatedLeads = leads.map(l => 
-      l.id === leadId ? { ...l, status: newStatus, updatedAt: new Date().toISOString() } : l
-    );
-    
-    setLeads(updatedLeads);
-    
-    toast({
-      title: 'Lead Updated',
-      description: `${lead.companyName} moved to ${LEAD_STATUSES[newStatus].label}`,
-    });
+    try {
+      // Update lead in the database
+      await updateLead(leadId, { stage_id: newStageId });
+      
+      // Update local state
+      const updatedLeads = leads.map(l => 
+        l.id === leadId ? { ...l, stage_id: newStageId } : l
+      );
+      
+      setLeads(updatedLeads);
+      
+      toast({
+        title: 'Lead Updated',
+        description: `${lead.client_company} moved to ${getStatusName(destination.droppableId)}`,
+      });
+    } catch (error) {
+      console.error('Error updating lead:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update lead status',
+        variant: 'destructive'
+      });
+    }
   };
   
-  const openLeadDetails = (leadId: string) => {
+  const openLeadDetails = (leadId: number) => {
     navigate(`/leads/${leadId}`);
   };
   
   const handleAddLead = () => {
     navigate('/leads/new');
   };
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[70vh]">
+        <div className="text-center">
+          <h2 className="text-lg font-medium">Loading pipeline data...</h2>
+          <p className="text-muted-foreground">Please wait while we fetch the latest leads</p>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="space-y-6">
@@ -125,15 +193,8 @@ const Pipeline = () => {
       </div>
       
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search leads..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+        <div className="w-full sm:w-80">
+          <GlobalSearch />
         </div>
         
         <div className="flex gap-2">
@@ -187,8 +248,10 @@ const Pipeline = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  {Object.entries(LEAD_STATUSES).map(([value, { label }]) => (
-                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  {Object.keys(leadsByStatus).map((stageId) => (
+                    <SelectItem key={stageId} value={stageId}>
+                      {getStatusName(stageId)}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -227,16 +290,18 @@ const Pipeline = () => {
       <div className={`overflow-x-auto pb-4 ${isMobile ? 'touch-pan-x' : ''}`}>
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="flex gap-4 min-w-max">
-            {Object.entries(LEAD_STATUSES).map(([status, { label, color }]) => (
-              <div key={status} className="kanban-column" style={{ minWidth: isMobile ? '260px' : '280px', maxWidth: '300px' }}>
+            {Object.keys(leadsByStatus).map((stageId) => (
+              <div key={stageId} className="kanban-column" style={{ minWidth: isMobile ? '260px' : '280px', maxWidth: '300px' }}>
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className={`font-medium ${color}`}>{label}</h3>
+                  <h3 className={`font-medium ${getStatusColor(stageId)}`}>
+                    {getStatusName(stageId)}
+                  </h3>
                   <Badge variant="outline">
-                    {leadsByStatus[status as LeadStatus].length}
+                    {leadsByStatus[stageId].length}
                   </Badge>
                 </div>
                 
-                <Droppable droppableId={status}>
+                <Droppable droppableId={stageId}>
                   {(provided) => (
                     <div
                       ref={provided.innerRef}
@@ -245,8 +310,8 @@ const Pipeline = () => {
                     >
                       <ScrollArea className="h-[calc(70vh-100px)]">
                         <div className="pr-2">
-                          {leadsByStatus[status as LeadStatus].map((lead, index) => (
-                            <Draggable key={lead.id} draggableId={lead.id} index={index}>
+                          {leadsByStatus[stageId].map((lead, index) => (
+                            <Draggable key={lead.id} draggableId={lead.id.toString()} index={index}>
                               {(provided) => (
                                 <div
                                   ref={provided.innerRef}
@@ -256,37 +321,20 @@ const Pipeline = () => {
                                   className="kanban-card cursor-pointer"
                                 >
                                   <div className="flex justify-between mb-2">
-                                    <h4 className="font-medium">{lead.companyName}</h4>
-                                    <Badge variant="outline">{formatInrCrores(lead.value)}</Badge>
+                                    <h4 className="font-medium">{lead.client_company}</h4>
+                                    <Badge variant="outline">{formatInrCrores(lead.estimated_value)}</Badge>
                                   </div>
                                   <div className="text-sm text-muted-foreground mb-3">
-                                    {lead.contactName}
+                                    {lead.contact_name}
                                   </div>
-                                  {lead.tags.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mb-2">
-                                      {lead.tags.slice(0, 2).map(tag => (
-                                        <span
-                                          key={tag.id}
-                                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white ${tag.color}`}
-                                        >
-                                          {tag.name}
-                                        </span>
-                                      ))}
-                                      {lead.tags.length > 2 && (
-                                        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted">
-                                          +{lead.tags.length - 2}
-                                        </span>
-                                      )}
-                                    </div>
-                                  )}
                                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <div className="flex items-center">
                                       <User className="h-3 w-3 mr-1" />
-                                      <span>Assigned</span>
+                                      <span>{lead.profiles?.name || "Unassigned"}</span>
                                     </div>
                                     <div className="flex items-center">
                                       <CalendarDays className="h-3 w-3 mr-1" />
-                                      <span>{formatDate(lead.updatedAt)}</span>
+                                      <span>{formatDate(lead.updated_at)}</span>
                                     </div>
                                   </div>
                                 </div>

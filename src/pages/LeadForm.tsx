@@ -22,15 +22,16 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Lead, LeadTag, LeadContact } from '@/types';
+import { Lead, LeadTag, LeadContact, LeadInsert } from '@/types';
 import { INDUSTRY_OPTIONS, LEAD_STATUSES, DEFAULT_LEAD_TAGS, LEAD_SCORE_OPTIONS } from '@/utils/constants';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
-import { mockLeads } from '@/data/mockData';
 import { ContactSection } from '@/components/leads/ContactSection';
 import { ProductServicesSection } from '@/components/leads/ProductServicesSection';
 import { TeamSection } from '@/components/leads/TeamSection';
 import { NextStepsSection } from '@/components/leads/NextStepsSection';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { createLead, fetchLeadById, updateLead, saveLeadContacts } from '@/services/leadsService';
+import { leadService } from '@/services/api';
 
 const LeadForm = () => {
   const { id } = useParams();
@@ -40,27 +41,78 @@ const LeadForm = () => {
   const isMobile = useIsMobile();
   
   const [isLoading, setIsLoading] = useState(false);
-  const [lead, setLead] = useState<Partial<Lead>>({
-    companyName: '',
-    contactName: '',
-    contactEmail: '',
-    contactPhone: '',
-    status: 'new',
-    value: 0,
-    tags: [],
-    createdBy: user?.id || '',
+  const [contacts, setContacts] = useState<LeadContact[]>([]);
+  const [lead, setLead] = useState<Partial<LeadInsert>>({
+    client_company: '',
+    client_industry: '',
+    contact_name: '',
+    contact_email: '',
+    contact_phone: '',
+    owner_id: user?.id || '',
   });
+  const [leadContacts, setLeadContacts] = useState<Partial<LeadContact>[]>([]);
+  const [selectedOwner, setSelectedOwner] = useState<string>(user?.id || '');
+  const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   
   // Fetch lead data if editing an existing lead
   useEffect(() => {
-    if (id) {
-      // In a real app, this would be an API call
-      const existingLead = mockLeads.find(l => l.id === id);
-      if (existingLead) {
-        setLead(existingLead);
+    const fetchLead = async () => {
+      if (id) {
+        setIsLoading(true);
+        try {
+          const numericId = parseInt(id, 10);
+          if (!isNaN(numericId)) {
+            const leadData = await fetchLeadById(numericId);
+            
+            if (leadData) {
+              // Set the form data from the fetched lead
+              setLead({
+                client_company: leadData.client_company,
+                client_industry: leadData.client_industry,
+                contact_name: leadData.contact_name,
+                contact_email: leadData.contact_email,
+                contact_phone: leadData.contact_phone,
+                contact_address: leadData.contact_address,
+                website: leadData.website,
+                products: leadData.products,
+                estimated_value: leadData.estimated_value,
+                owner_id: leadData.owner_id,
+                stage_id: leadData.stage_id,
+                meeting_notes: leadData.meeting_notes,
+                next_activity: leadData.next_activity,
+              });
+              
+              setSelectedOwner(leadData.owner_id || '');
+              setSelectedProducts(leadData.products || []);
+              
+              // Set contacts if available
+              if (leadData.lead_contacts) {
+                setLeadContacts(leadData.lead_contacts);
+              }
+              
+              // Set team members if available (if lead_team was included in the query)
+              if (leadData.team) {
+                const teamMembers = leadData.team.map((member: any) => member.user_id);
+                setSelectedMembers(teamMembers);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching lead:', error);
+          toast({
+            title: "Error",
+            description: "Failed to load lead data",
+            variant: "destructive"
+          });
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-  }, [id]);
+    };
+    
+    fetchLead();
+  }, [id, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -71,29 +123,73 @@ const LeadForm = () => {
     setLead((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsLoading(true);
     
     // Validate required fields
-    if (!lead.companyName || !lead.industry) {
+    if (!lead.client_company) {
       toast({
         title: "Missing required fields",
-        description: "Please fill in all required fields",
+        description: "Company name is required",
         variant: "destructive"
       });
       setIsLoading(false);
       return;
     }
     
-    // In a real app, this would save to the database
-    setTimeout(() => {
-      toast({
-        title: id ? "Lead updated" : "Lead created",
-        description: `Successfully ${id ? 'updated' : 'created'} lead for ${lead.companyName}`,
-      });
-      setIsLoading(false);
+    try {
+      // Prepare lead data
+      const leadData: LeadInsert = {
+        ...lead as LeadInsert,
+        owner_id: selectedOwner,
+        products: selectedProducts
+      };
+      
+      let savedLeadId: number;
+      
+      if (id) {
+        // Update existing lead
+        const numericId = parseInt(id, 10);
+        const updatedLead = await updateLead(numericId, leadData);
+        savedLeadId = updatedLead.id;
+        
+        // Save lead contacts
+        if (leadContacts.length > 0) {
+          await saveLeadContacts(savedLeadId, leadContacts);
+        }
+        
+        toast({
+          title: "Lead updated",
+          description: `Successfully updated lead for ${lead.client_company}`,
+        });
+      } else {
+        // Create new lead
+        const newLead = await createLead(leadData);
+        savedLeadId = newLead.id;
+        
+        // Save lead contacts
+        if (leadContacts.length > 0) {
+          await saveLeadContacts(savedLeadId, leadContacts);
+        }
+        
+        toast({
+          title: "Lead created",
+          description: `Successfully created lead for ${lead.client_company}`,
+        });
+      }
+      
+      // Navigate back to leads list
       navigate('/leads');
-    }, 500);
+    } catch (error) {
+      console.error('Error saving lead:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save lead data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -126,22 +222,22 @@ const LeadForm = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name *</Label>
+              <Label htmlFor="client_company">Company Name *</Label>
               <Input
-                id="companyName"
-                name="companyName"
+                id="client_company"
+                name="client_company"
                 placeholder="Company name"
-                value={lead.companyName || ''}
+                value={lead.client_company || ''}
                 onChange={handleInputChange}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="industry">Industry *</Label>
+              <Label htmlFor="client_industry">Industry</Label>
               <Select
-                value={lead.industry}
-                onValueChange={(value) => handleSelectChange('industry', value)}
+                value={lead.client_industry}
+                onValueChange={(value) => handleSelectChange('client_industry', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select industry" />
@@ -168,31 +264,31 @@ const LeadForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="value">Deal Value (INR Crores)</Label>
+              <Label htmlFor="estimated_value">Deal Value (INR Crores)</Label>
               <Input
-                id="value"
-                name="value"
+                id="estimated_value"
+                name="estimated_value"
                 type="number"
                 step="0.01"
                 min="0"
                 placeholder="0.00"
-                value={lead.value || ''}
+                value={lead.estimated_value || ''}
                 onChange={handleInputChange}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="stage_id">Status</Label>
               <Select
-                value={lead.status}
-                onValueChange={(value) => handleSelectChange('status', value)}
+                value={lead.stage_id?.toString()}
+                onValueChange={(value) => handleSelectChange('stage_id', value)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.entries(LEAD_STATUSES).map(([value, { label }]) => (
-                    <SelectItem key={value} value={value}>
+                  {Object.entries(LEAD_STATUSES).map(([key, { label }]) => (
+                    <SelectItem key={key} value={(parseInt(key) + 1).toString()}>
                       {label}
                     </SelectItem>
                   ))}
@@ -201,12 +297,12 @@ const LeadForm = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="meeting_notes">Notes</Label>
               <Textarea
-                id="notes"
-                name="notes"
+                id="meeting_notes"
+                name="meeting_notes"
                 placeholder="Additional information about this lead"
-                value={lead.notes || ''}
+                value={lead.meeting_notes || ''}
                 onChange={handleInputChange}
                 rows={4}
               />
@@ -215,27 +311,78 @@ const LeadForm = () => {
         </Card>
 
         <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact Information</CardTitle>
+              <CardDescription>
+                Primary contact details for this lead
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Contact Name</Label>
+                <Input
+                  id="contact_name"
+                  name="contact_name"
+                  placeholder="Contact person name"
+                  value={lead.contact_name || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="contact_email">Contact Email</Label>
+                <Input
+                  id="contact_email"
+                  name="contact_email"
+                  type="email"
+                  placeholder="contact@example.com"
+                  value={lead.contact_email || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="contact_phone">Contact Phone</Label>
+                <Input
+                  id="contact_phone"
+                  name="contact_phone"
+                  placeholder="+91 98765 43210"
+                  value={lead.contact_phone || ''}
+                  onChange={handleInputChange}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="contact_address">Contact Address</Label>
+                <Textarea
+                  id="contact_address"
+                  name="contact_address"
+                  placeholder="Contact address"
+                  value={lead.contact_address || ''}
+                  onChange={handleInputChange}
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+          
           <ContactSection 
-            contacts={lead.contactDetails || []} 
-            setContacts={(contacts) => setLead({...lead, contactDetails: contacts})}
+            contacts={leadContacts} 
+            setContacts={setLeadContacts}
           />
           
           <ProductServicesSection 
-            selectedProducts={lead.products || []}
-            onChange={(products) => setLead({...lead, products})}
+            selectedProducts={selectedProducts}
+            onChange={setSelectedProducts}
           />
         </div>
 
         <TeamSection 
-          selectedOwner={lead.assignedTo}
-          selectedMembers={lead.teamMembers || []}
-          onOwnerChange={(ownerId) => setLead({...lead, assignedTo: ownerId})}
-          onMembersChange={(memberIds) => setLead({...lead, teamMembers: memberIds})}
-        />
-        
-        <NextStepsSection
-          tasks={lead.tasks || []}
-          onChange={(tasks) => setLead({...lead, tasks})}
+          selectedOwner={selectedOwner}
+          selectedMembers={selectedMembers}
+          onOwnerChange={setSelectedOwner}
+          onMembersChange={setSelectedMembers}
         />
       </div>
 

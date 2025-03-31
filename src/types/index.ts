@@ -117,3 +117,8 @@ export interface LeadInsert {
   meeting_notes?: string;
   next_activity?: string;
 }
+
+export interface SearchResult {
+  leads: any[];
+  users: any[];
+}
