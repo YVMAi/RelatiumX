@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { LeadMessage, LeadMessageInsert, MessageMentionInsert, MessageAttachmentInsert, Profile } from "@/types/supabase";
 
@@ -219,8 +218,7 @@ export const fetchMentionableUsers = async () => {
   try {
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, email')
-      .order('name', { ascending: true });
+      .select('id, name, email, created_at, updated_at, role_id');
 
     if (error) {
       console.error('Error fetching mentionable users:', error);

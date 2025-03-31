@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -60,7 +59,9 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     const loadMentionableUsers = async () => {
       try {
         const users = await fetchMentionableUsers();
-        setMentionableUsers(users || []);
+        if (users) {
+          setMentionableUsers(users);
+        }
       } catch (error) {
         console.error('Error loading mentionable users:', error);
       }
