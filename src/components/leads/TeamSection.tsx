@@ -19,6 +19,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { fetchUsers } from '@/services/leadsService';
+import { useToast } from '@/hooks/use-toast';
 
 type TeamSectionProps = {
   selectedOwner?: string;
@@ -35,22 +36,29 @@ export const TeamSection = ({
 }: TeamSectionProps) => {
   const [users, setUsers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     const loadUsers = async () => {
       setIsLoading(true);
       try {
         const userData = await fetchUsers();
+        console.log('Fetched users:', userData);
         setUsers(userData);
       } catch (error) {
         console.error('Error loading users:', error);
+        toast({
+          title: "Error loading users",
+          description: "Please try again or contact support if the issue persists.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
     };
     
     loadUsers();
-  }, []);
+  }, [toast]);
 
   const toggleTeamMember = (userId: string) => {
     if (selectedMembers.includes(userId)) {
@@ -103,29 +111,35 @@ export const TeamSection = ({
           ) : (
             <ScrollArea className="h-[200px] border rounded-md p-2">
               <div className="space-y-2">
-                {users.map(user => (
-                  <div key={user.id} className="flex items-center space-x-2 py-1">
-                    <Checkbox
-                      id={`member-${user.id}`}
-                      checked={selectedMembers.includes(user.id)}
-                      onCheckedChange={() => toggleTeamMember(user.id)}
-                    />
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarFallback>{user.name ? user.name.charAt(0) : '?'}</AvatarFallback>
-                      </Avatar>
-                      <Label
-                        htmlFor={`member-${user.id}`}
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        {user.name}
-                        <span className="text-xs text-muted-foreground block">
-                          {user.email}
-                        </span>
-                      </Label>
+                {users.length > 0 ? (
+                  users.map(user => (
+                    <div key={user.id} className="flex items-center space-x-2 py-1">
+                      <Checkbox
+                        id={`member-${user.id}`}
+                        checked={selectedMembers.includes(user.id)}
+                        onCheckedChange={() => toggleTeamMember(user.id)}
+                      />
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback>{user.name ? user.name.charAt(0) : '?'}</AvatarFallback>
+                        </Avatar>
+                        <Label
+                          htmlFor={`member-${user.id}`}
+                          className="text-sm font-normal cursor-pointer"
+                        >
+                          {user.name}
+                          <span className="text-xs text-muted-foreground block">
+                            {user.email}
+                          </span>
+                        </Label>
+                      </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-muted-foreground">No users found</p>
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
           )}

@@ -3,42 +3,52 @@ import { supabase } from "@/integrations/supabase/client";
 import { Lead, LeadContact, LeadInsert } from "@/types";
 
 export const fetchLeads = async () => {
-  const { data, error } = await supabase
-    .from('leads')
-    .select(`
-      *,
-      profiles(name, email),
-      lead_stages(*),
-      lead_contacts(*)
-    `)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        profiles(name, email),
+        lead_stages(*),
+        lead_contacts(*)
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching leads:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching leads:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchLeads:', error);
+    return [];
   }
-
-  return data || [];
 };
 
 export const fetchLeadById = async (id: number) => {
-  const { data, error } = await supabase
-    .from('leads')
-    .select(`
-      *,
-      profiles(name, email),
-      lead_stages(*),
-      lead_contacts(*)
-    `)
-    .eq('id', id)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        profiles(name, email),
+        lead_stages(*),
+        lead_contacts(*)
+      `)
+      .eq('id', id)
+      .single();
 
-  if (error) {
-    console.error('Error fetching lead:', error);
+    if (error) {
+      console.error('Error fetching lead:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in fetchLeadById:', error);
     throw error;
   }
-
-  return data;
 };
 
 export const createLead = async (lead: LeadInsert) => {
@@ -157,17 +167,22 @@ export const deleteLeadById = async (id: number) => {
 
 // New functions for user and team data
 export const fetchUsers = async () => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .order('name', { ascending: true });
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('name', { ascending: true });
 
-  if (error) {
-    console.error('Error fetching users:', error);
-    throw error;
+    if (error) {
+      console.error('Error fetching users:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchUsers:', error);
+    return [];
   }
-
-  return data || [];
 };
 
 // Search function
@@ -176,34 +191,39 @@ export const globalSearch = async (searchTerm: string) => {
     return { leads: [], users: [] };
   }
 
-  // Search in leads
-  const { data: leadsData, error: leadsError } = await supabase
-    .from('leads')
-    .select(`
-      *,
-      profiles(name, email),
-      lead_stages(*)
-    `)
-    .or(`client_company.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%,contact_email.ilike.%${searchTerm}%`)
-    .limit(10);
+  try {
+    // Search in leads
+    const { data: leadsData, error: leadsError } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        profiles(name, email),
+        lead_stages(*)
+      `)
+      .or(`client_company.ilike.%${searchTerm}%,contact_name.ilike.%${searchTerm}%,contact_email.ilike.%${searchTerm}%`)
+      .limit(10);
 
-  if (leadsError) {
-    console.error('Error searching leads:', leadsError);
+    if (leadsError) {
+      console.error('Error searching leads:', leadsError);
+    }
+
+    // Search in users
+    const { data: usersData, error: usersError } = await supabase
+      .from('profiles')
+      .select('*')
+      .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
+      .limit(10);
+
+    if (usersError) {
+      console.error('Error searching users:', usersError);
+    }
+
+    return {
+      leads: leadsData || [],
+      users: usersData || []
+    };
+  } catch (error) {
+    console.error('Error in globalSearch:', error);
+    return { leads: [], users: [] };
   }
-
-  // Search in users
-  const { data: usersData, error: usersError } = await supabase
-    .from('profiles')
-    .select('*')
-    .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-    .limit(10);
-
-  if (usersError) {
-    console.error('Error searching users:', usersError);
-  }
-
-  return {
-    leads: leadsData || [],
-    users: usersData || []
-  };
 };
