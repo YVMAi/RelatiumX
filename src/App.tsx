@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard";
 import Pipeline from "./pages/Pipeline";
 import Leads from "./pages/Leads";
 import LeadForm from "./pages/LeadForm";
+import LeadDetail from "./pages/LeadDetail";
 import UserManagement from "./pages/UserManagement";
 import Settings from "./pages/Settings";
 import Login from "./pages/Login";
@@ -42,7 +43,8 @@ const App = () => {
                   <Route index element={<Dashboard />} />
                   <Route path="leads" element={<Leads />} />
                   <Route path="leads/new" element={<LeadForm />} />
-                  <Route path="leads/:id" element={<LeadForm />} />
+                  <Route path="leads/:id/edit" element={<LeadForm />} />
+                  <Route path="leads/:id" element={<LeadDetail />} />
                   <Route path="pipeline" element={<Pipeline />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="settings" element={<Settings />} />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,7 +64,6 @@ const Leads = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  // Fetch leads from the database
   useEffect(() => {
     const loadLeads = async () => {
       setIsLoading(true);
@@ -139,7 +137,6 @@ const Leads = () => {
     ) : true;
   };
 
-  // Function to get status label and color from stage_id
   const getLeadStatus = (stageId: number) => {
     const index = stageId - 1;
     const statuses = Object.values(LEAD_STATUSES);
@@ -150,7 +147,6 @@ const Leads = () => {
     };
   };
 
-  // Function to render mobile lead cards
   const renderMobileLeadCards = () => {
     return filteredLeads.map(lead => {
       const status = getLeadStatus(lead.stage_id || 1);
@@ -189,7 +185,7 @@ const Leads = () => {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  onClick={() => navigate(`/leads/${lead.id}`)}
+                  onClick={() => navigate(`/leads/${lead.id}/edit`)}
                 >
                   <Edit className="h-4 w-4 mr-1" /> Edit
                 </Button>
@@ -334,7 +330,7 @@ const Leads = () => {
                                 </DropdownMenuItem>
                                 
                                 {canEditLead(lead) && (
-                                  <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
+                                  <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}/edit`)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
@@ -378,7 +374,6 @@ const Leads = () => {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
