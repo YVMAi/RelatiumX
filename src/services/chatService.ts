@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { LeadMessage, LeadMessageInsert, MessageMentionInsert, MessageAttachmentInsert, Profile } from "@/types/supabase";
 
@@ -214,7 +215,7 @@ export const subscribeToLeadMessages = (
 };
 
 // Get all users for @mentions
-export const fetchMentionableUsers = async () => {
+export const fetchMentionableUsers = async (): Promise<Profile[]> => {
   try {
     const { data, error } = await supabase
       .from('profiles')
@@ -225,7 +226,7 @@ export const fetchMentionableUsers = async () => {
       throw error;
     }
 
-    return data;
+    return data || [];
   } catch (error) {
     console.error('Error in fetchMentionableUsers:', error);
     return [];

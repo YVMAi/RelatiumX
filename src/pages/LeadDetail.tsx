@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { fetchLeadById } from '@/services/leadsService';
 import { LEAD_STATUSES } from '@/utils/constants';
 import { formatInrCrores, formatDate } from '@/utils/format';
-import { ArrowLeft, Building, User, Calendar, Phone, Mail, Globe } from 'lucide-react';
+import { ArrowLeft, Building, User, Calendar, Phone, Mail, Globe, FileText, Upload, PlusCircle } from 'lucide-react';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 
 const LeadDetail = () => {
@@ -36,6 +36,7 @@ const LeadDetail = () => {
         const data = await fetchLeadById(leadId);
         
         if (data) {
+          console.log("Lead data loaded:", data);
           setLead(data);
         } else {
           toast({
@@ -101,25 +102,27 @@ const LeadDetail = () => {
         <div className="flex-1">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold tracking-tight">
-              {lead.client_company}
+              {lead?.client_company}
             </h1>
             <div className="flex gap-3">
               <Button 
                 variant="outline"
-                onClick={() => navigate(`/leads/${id}`)}
+                onClick={() => navigate(`/leads/${id}/edit`)}
               >
                 Edit Lead
               </Button>
             </div>
           </div>
           <div className="flex items-center gap-3 mt-1">
-            <Badge
-              variant="outline"
-              className={`${status.bgColor} ${status.color}`}
-            >
-              {status.label}
-            </Badge>
-            {lead.client_industry && (
+            {lead?.stage_id && (
+              <Badge
+                variant="outline"
+                className={`${getLeadStatus(lead.stage_id).bgColor} ${getLeadStatus(lead.stage_id).color}`}
+              >
+                {getLeadStatus(lead.stage_id).label}
+              </Badge>
+            )}
+            {lead?.client_industry && (
               <span className="text-muted-foreground">
                 {lead.client_industry}
               </span>
@@ -133,7 +136,7 @@ const LeadDetail = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="chat">Team Chat</TabsTrigger>
           <TabsTrigger value="tasks">Tasks</TabsTrigger>
-          <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="notes">Notes & Documents</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="mt-6">
@@ -319,25 +322,36 @@ const LeadDetail = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChatPanel 
-                leadId={parseInt(id as string)} 
-                leadName={lead.client_company} 
-              />
+              {lead && (
+                <ChatPanel 
+                  leadId={parseInt(id as string)} 
+                  leadName={lead.client_company} 
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
         
         <TabsContent value="tasks" className="mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Tasks</CardTitle>
-              <CardDescription>
-                Manage tasks related to this lead
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Tasks</CardTitle>
+                <CardDescription>
+                  Manage tasks related to this lead
+                </CardDescription>
+              </div>
+              <Button>
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Add Task
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Task management will be implemented soon
+              <div className="space-y-4">
+                {/* Tasks will be implemented here */}
+                <div className="text-center py-8 text-muted-foreground">
+                  No tasks yet. Add a task to get started.
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -345,15 +359,30 @@ const LeadDetail = () => {
         
         <TabsContent value="notes" className="mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Notes & Documents</CardTitle>
-              <CardDescription>
-                Keep track of important notes and documents
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Notes & Documents</CardTitle>
+                <CardDescription>
+                  Keep track of important notes and documents
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Add Note
+                </Button>
+                <Button>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Upload
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Notes management will be implemented soon
+              <div className="space-y-4">
+                {/* Notes and documents will be implemented here */}
+                <div className="text-center py-8 text-muted-foreground">
+                  No notes or documents yet. Add some to get started.
+                </div>
               </div>
             </CardContent>
           </Card>

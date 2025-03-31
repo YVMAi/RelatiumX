@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -31,7 +30,6 @@ import { TeamSection } from '@/components/leads/TeamSection';
 import { NextStepsSection } from '@/components/leads/NextStepsSection';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { createLead, fetchLeadById, updateLead, saveLeadContacts, fetchLeadTeamMembers } from '@/services/leadsService';
-import { leadService } from '@/services/api';
 
 const LeadForm = () => {
   const { id } = useParams();
@@ -55,7 +53,6 @@ const LeadForm = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   
-  // Fetch lead data if editing an existing lead
   useEffect(() => {
     const fetchLead = async () => {
       if (id) {
@@ -66,7 +63,6 @@ const LeadForm = () => {
             const leadData = await fetchLeadById(numericId);
             
             if (leadData) {
-              // Set the form data from the fetched lead
               setLead({
                 client_company: leadData.client_company,
                 client_industry: leadData.client_industry,
@@ -86,12 +82,10 @@ const LeadForm = () => {
               setSelectedOwner(leadData.owner_id || '');
               setSelectedProducts(leadData.products || []);
               
-              // Set contacts if available
               if (leadData.lead_contacts) {
                 setLeadContacts(leadData.lead_contacts);
               }
               
-              // Fetch team members for this lead
               const teamMembers = await fetchLeadTeamMembers(numericId);
               if (teamMembers && teamMembers.length > 0) {
                 const teamMemberIds = teamMembers.map((member: any) => member.user_id);
@@ -127,7 +121,6 @@ const LeadForm = () => {
   const handleSave = async () => {
     setIsLoading(true);
     
-    // Validate required fields
     if (!lead.client_company) {
       toast({
         title: "Missing required fields",
@@ -139,7 +132,6 @@ const LeadForm = () => {
     }
     
     try {
-      // Prepare lead data
       const leadData: LeadInsert = {
         ...lead as LeadInsert,
         owner_id: selectedOwner,
@@ -149,12 +141,10 @@ const LeadForm = () => {
       let savedLeadId: number;
       
       if (id) {
-        // Update existing lead
         const numericId = parseInt(id, 10);
         const updatedLead = await updateLead(numericId, leadData);
         savedLeadId = updatedLead.id;
         
-        // Save lead contacts
         if (leadContacts.length > 0) {
           await saveLeadContacts(savedLeadId, leadContacts);
         }
@@ -164,11 +154,9 @@ const LeadForm = () => {
           description: `Successfully updated lead for ${lead.client_company}`,
         });
       } else {
-        // Create new lead
         const newLead = await createLead(leadData);
         savedLeadId = newLead.id;
         
-        // Save lead contacts
         if (leadContacts.length > 0) {
           await saveLeadContacts(savedLeadId, leadContacts);
         }
@@ -179,7 +167,6 @@ const LeadForm = () => {
         });
       }
       
-      // Navigate back to leads list
       navigate('/leads');
     } catch (error) {
       console.error('Error saving lead:', error);

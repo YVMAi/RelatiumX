@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, LeadContact, LeadInsert } from "@/types";
 
@@ -28,6 +27,7 @@ export const fetchLeads = async () => {
 
 export const fetchLeadById = async (id: number) => {
   try {
+    console.log('Fetching lead with ID:', id);
     const { data, error } = await supabase
       .from('leads')
       .select(`
@@ -44,6 +44,7 @@ export const fetchLeadById = async (id: number) => {
       throw error;
     }
 
+    console.log('Lead data fetched:', data);
     return data;
   } catch (error) {
     console.error('Error in fetchLeadById:', error);
@@ -71,34 +72,48 @@ export const fetchLeadTeamMembers = async (leadId: number) => {
 };
 
 export const createLead = async (lead: LeadInsert) => {
-  const { data, error } = await supabase
-    .from('leads')
-    .insert(lead)
-    .select()
-    .single();
+  try {
+    console.log('Creating lead with data:', lead);
+    const { data, error } = await supabase
+      .from('leads')
+      .insert(lead)
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error creating lead:', error);
+    if (error) {
+      console.error('Error creating lead:', error);
+      throw error;
+    }
+
+    console.log('Lead created:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in createLead:', error);
     throw error;
   }
-
-  return data;
 };
 
 export const updateLead = async (id: number, updates: Partial<LeadInsert>) => {
-  const { data, error } = await supabase
-    .from('leads')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  try {
+    console.log('Updating lead with ID:', id, 'and data:', updates);
+    const { data, error } = await supabase
+      .from('leads')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
 
-  if (error) {
-    console.error('Error updating lead:', error);
+    if (error) {
+      console.error('Error updating lead:', error);
+      throw error;
+    }
+
+    console.log('Lead updated:', data);
+    return data;
+  } catch (error) {
+    console.error('Error in updateLead:', error);
     throw error;
   }
-
-  return data;
 };
 
 export const saveLeadContacts = async (leadId: number, contacts: Partial<LeadContact>[]) => {
