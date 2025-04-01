@@ -1,6 +1,5 @@
-
 import { supabase } from "@/integrations/supabase/client";
-import { LeadMessage, LeadMessageInsert, MessageMentionInsert, MessageAttachmentInsert, Profile } from "@/types/supabase";
+import { LeadMessage, LeadMessageInsert, MessageMentionInsert, MessageAttachmentInsert, Profile, MessageReadReceiptInsert } from "@/types/supabase";
 
 // Fetch messages for a lead
 export const fetchLeadMessages = async (leadId: number) => {
@@ -321,7 +320,10 @@ export const markMessageAsDelivered = async (messageId: string) => {
   try {
     const { data, error } = await supabase
       .from('lead_messages')
-      .update({ message_status: 'delivered' })
+      .update({ 
+        message_status: 'delivered',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', messageId)
       .select()
       .single();
@@ -344,19 +346,24 @@ export const markMessageAsRead = async (messageId: string, userId: string) => {
     // Update message status if needed
     await supabase
       .from('lead_messages')
-      .update({ message_status: 'read' })
+      .update({ 
+        message_status: 'read',
+        updated_at: new Date().toISOString()
+      })
       .eq('id', messageId);
     
     // Add read receipt
-    const { error } = await supabase
-      .from('message_read_receipts')
-      .upsert({ 
-        message_id: messageId, 
-        user_id: userId, 
-        read_at: new Date().toISOString()
-      }, {
-        onConflict: 'message_id,user_id'
-      });
+    const readReceipt: MessageReadReceiptInsert = {
+      message_id: messageId,
+      user_id: userId,
+      read_at: new Date().toISOString()
+    };
+    
+    const { error } = await supabase.rpc('upsert_read_receipt', {
+      p_message_id: messageId,
+      p_user_id: userId,
+      p_read_at: new Date().toISOString()
+    });
     
     if (error) {
       console.error('Error adding read receipt:', error);

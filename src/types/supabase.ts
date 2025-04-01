@@ -15,9 +15,17 @@ export type MasterSetting = Tables['master_settings']['Row'];
 export type AuditLog = Tables['audit_logs']['Row'];
 export type LeadChangeLog = Tables['lead_change_logs']['Row'];
 export type Role = Tables['roles']['Row'];
-export type LeadMessage = Tables['lead_messages']['Row'];
+export type LeadMessage = Tables['lead_messages']['Row'] & {
+  message_status?: 'sent' | 'delivered' | 'read';
+};
 export type MessageMention = Tables['message_mentions']['Row'];
 export type MessageAttachment = Tables['message_attachments']['Row'];
+export type MessageReadReceipt = {
+  id: string;
+  message_id: string;
+  user_id: string;
+  read_at: string;
+};
 
 // Define type-safe insert types
 export type ProfileInsert = Tables['profiles']['Insert'];
@@ -25,9 +33,16 @@ export type LeadInsert = Tables['leads']['Insert'];
 export type LeadTeamInsert = Tables['lead_team']['Insert'];
 export type ScheduledTaskInsert = Tables['scheduled_tasks']['Insert'];
 export type NotificationInsert = Tables['notifications']['Insert'];
-export type LeadMessageInsert = Tables['lead_messages']['Insert'];
+export type LeadMessageInsert = Tables['lead_messages']['Insert'] & {
+  message_status?: 'sent' | 'delivered' | 'read';
+};
 export type MessageMentionInsert = Tables['message_mentions']['Insert'];
 export type MessageAttachmentInsert = Tables['message_attachments']['Insert'];
+export type MessageReadReceiptInsert = {
+  message_id: string;
+  user_id: string;
+  read_at?: string;
+};
 
 // Type-safe enum types
 export type LeadStatus = Database['public']['Enums']['lead_status'];

@@ -6,7 +6,7 @@ import {
   ImageIcon, 
   FileTextIcon, 
   FileSpreadsheetIcon, 
-  FilePresentationIcon,
+  PresentationIcon,
   Download,
   ExternalLink
 } from 'lucide-react';
@@ -74,7 +74,7 @@ export const AttachmentItem = ({
     else if (fileType.includes('spreadsheet') || fileType.includes('excel') || fileType.includes('csv')) 
       return <FileSpreadsheetIcon className="h-5 w-5" />;
     else if (fileType.includes('presentation') || fileType.includes('powerpoint')) 
-      return <FilePresentationIcon className="h-5 w-5" />;
+      return <PresentationIcon className="h-5 w-5" />;
     else return <FileIcon className="h-5 w-5" />;
   };
   
