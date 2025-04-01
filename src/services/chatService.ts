@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { LeadMessage, LeadMessageInsert, MessageMentionInsert, MessageAttachmentInsert, Profile, MessageReadReceiptInsert } from "@/types/supabase";
 
@@ -342,38 +341,39 @@ export const markMessageAsDelivered = async (messageId: string) => {
 };
 
 // Mark message as read by a user
-export const markMessageAsRead = async (messageId: string, userId: string) => {
+export const markMessageAsRead = async (messageId: string) => {
+  if (!messageId) return;
+  
   try {
-    // Update message status if needed
-    await supabase
-      .from('lead_messages')
-      .update({ 
-        message_status: 'read',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', messageId);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
     
-    // We need to manually insert the read receipt instead of using RPC
-    // since the TypeScript types don't recognize our custom RPC function
-    const { error } = await supabase
+    // Check if a read receipt already exists
+    const { data: existingReceipt } = await supabase
       .from('message_read_receipts')
-      .upsert({
-        message_id: messageId,
-        user_id: userId,
-        read_at: new Date().toISOString()
-      }, {
-        onConflict: 'message_id,user_id'
-      });
+      .select('id')
+      .eq('message_id', messageId)
+      .eq('user_id', user.id)
+      .single();
     
-    if (error) {
-      console.error('Error adding read receipt:', error);
-      throw error;
+    if (existingReceipt) {
+      // Update the existing read receipt with current timestamp
+      await supabase
+        .from('message_read_receipts')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', existingReceipt.id);
+    } else {
+      // Insert a new read receipt
+      await supabase
+        .from('message_read_receipts')
+        .insert({
+          message_id: messageId,
+          user_id: user.id,
+          read_at: new Date().toISOString()
+        });
     }
-    
-    return true;
   } catch (error) {
-    console.error('Error in markMessageAsRead:', error);
-    throw error;
+    console.error('Error marking message as read:', error);
   }
 };
 

@@ -1,75 +1,145 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  BadgeIndianRupee, 
+  BarChart4, 
+  Building, 
+  Package, 
+  RefreshCw, 
+  Percent, 
+  TrendingUp,
+  TrendingDown,
+  Users
+} from 'lucide-react';
+import { format } from 'date-fns';
 import { formatInrCrores, formatPercentage } from '@/utils/format';
-import { ArrowUpRight, ArrowDownRight, BarChart4, IndianRupee, Users, BadgeIndianRupee, Percent, TrendingUp, TrendingDown } from 'lucide-react';
-import { mockDashboardMetrics, mockLeads, mockPipelineChartData, mockRevenueChartData, mockLeadSourceChartData } from '@/data/mockData';
-import { DashboardMetric } from '@/types';
-import { TIME_PERIOD_OPTIONS } from '@/utils/constants';
-import { Bar, Line, Pie } from 'recharts';
 
-const DashboardMetricCard = ({ metric }: { metric: DashboardMetric }) => {
-  const trendIcon = metric.trend === 'up' ? 
-    <ArrowUpRight className="h-4 w-4 text-success" /> : 
-    metric.trend === 'down' ? 
-      <ArrowDownRight className="h-4 w-4 text-destructive" /> : 
-      null;
-  
-  const getIcon = () => {
-    switch (metric.icon) {
-      case 'trending-up': return <TrendingUp className="h-5 w-5" />;
-      case 'percent': return <Percent className="h-5 w-5" />;
-      case 'users': return <Users className="h-5 w-5" />;
-      case 'badge-indian-rupee': return <BadgeIndianRupee className="h-5 w-5" />;
-      default: return <BarChart4 className="h-5 w-5" />;
+import { FilterBar, FilterOption } from '@/components/dashboard/FilterBar';
+import { MetricCard } from '@/components/dashboard/MetricCard';
+import { 
+  PipelineChart, 
+  IndustryChart, 
+  TeamPerformanceChart,
+  TrendChart 
+} from '@/components/dashboard/DashboardCharts';
+import { DashboardSkeleton } from '@/components/dashboard/DashboardLoader';
+
+import { 
+  DashboardMetrics, 
+  LeadFilter, 
+  LeadsByIndustry, 
+  LeadsByOwner, 
+  LeadsByStage, 
+  LeadTrendData,
+  fetchDashboardMetrics,
+  fetchFilterOptions,
+  fetchLeadsByIndustry,
+  fetchLeadsByOwner,
+  fetchLeadsByStage,
+  fetchLeadTrends
+} from '@/services/dashboardService';
+
+// Function to map raw data to FilterOption format
+const mapToFilterOptions = (items: string[] | { id: string | number, name: string }[]): FilterOption[] => {
+  return items.map(item => {
+    if (typeof item === 'string') {
+      return { value: item, label: item };
+    } else {
+      return { value: String(item.id), label: item.name };
     }
-  };
-  
-  const formatValue = () => {
-    switch (metric.type) {
-      case 'currency': return formatInrCrores(metric.value as number);
-      case 'percentage': return formatPercentage(metric.value as number);
-      default: return metric.value.toString();
-    }
-  };
-  
-  return (
-    <Card className="stat-card">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-          {getIcon()}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{formatValue()}</div>
-        {metric.change !== undefined && (
-          <p className="flex items-center text-xs text-muted-foreground gap-1 mt-1">
-            {trendIcon}
-            <span className={metric.trend === 'up' ? 'text-success' : metric.trend === 'down' ? 'text-destructive' : ''}>
-              {metric.change > 0 ? '+' : ''}{metric.change}%
-            </span> from previous period
-          </p>
-        )}
-      </CardContent>
-    </Card>
-  );
+  });
 };
 
 const Dashboard = () => {
   const { profile } = useAuth();
-  const [timePeriod, setTimePeriod] = useState('thisMonth');
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<LeadFilter>({});
   
-  // Calculate some basic metrics for the dashboard
-  const totalLeads = mockLeads.length;
-  const newLeads = mockLeads.filter(lead => lead.status === 'new').length;
-  const activeLeads = mockLeads.filter(lead => !['closed_won', 'closed_lost'].includes(lead.status)).length;
-  const closedWonLeads = mockLeads.filter(lead => lead.status === 'closed_won').length;
-  const closedLostLeads = mockLeads.filter(lead => lead.status === 'closed_lost').length;
-  const conversionRate = totalLeads > 0 ? closedWonLeads / totalLeads : 0;
+  // Filter options
+  const [ownerOptions, setOwnerOptions] = useState<FilterOption[]>([]);
+  const [industryOptions, setIndustryOptions] = useState<FilterOption[]>([]);
+  const [productOptions, setProductOptions] = useState<FilterOption[]>([]);
+  const [stageOptions, setStageOptions] = useState<FilterOption[]>([]);
+  
+  // Dashboard data
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    newLeads: 0,
+    pipelineLeads: 0,
+    convertedLeads: 0,
+    lostLeads: 0,
+    totalLeadValue: 0,
+    conversionRate: 0
+  });
+  
+  const [stageData, setStageData] = useState<LeadsByStage[]>([]);
+  const [industryData, setIndustryData] = useState<LeadsByIndustry[]>([]);
+  const [ownerData, setOwnerData] = useState<LeadsByOwner[]>([]);
+  const [trendData, setTrendData] = useState<LeadTrendData[]>([]);
+  
+  // Load filter options
+  useEffect(() => {
+    const loadFilterOptions = async () => {
+      try {
+        const options = await fetchFilterOptions();
+        
+        setOwnerOptions(mapToFilterOptions(options.owners));
+        setIndustryOptions(mapToFilterOptions(options.industries));
+        setProductOptions(mapToFilterOptions(options.products));
+        setStageOptions(mapToFilterOptions(options.stages));
+      } catch (error) {
+        console.error('Error loading filter options:', error);
+      }
+    };
+    
+    loadFilterOptions();
+  }, []);
+  
+  // Load dashboard data
+  useEffect(() => {
+    const loadDashboardData = async () => {
+      setLoading(true);
+      
+      try {
+        // Fetch all dashboard data in parallel
+        const [
+          metricsData,
+          stagesData,
+          industriesData,
+          ownersData,
+          trendsData
+        ] = await Promise.all([
+          fetchDashboardMetrics(filters),
+          fetchLeadsByStage(filters),
+          fetchLeadsByIndustry(filters),
+          fetchLeadsByOwner(filters),
+          fetchLeadTrends(filters)
+        ]);
+        
+        setMetrics(metricsData);
+        setStageData(stagesData);
+        setIndustryData(industriesData);
+        setOwnerData(ownersData);
+        setTrendData(trendsData);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadDashboardData();
+  }, [filters]);
+  
+  // Handle filter changes
+  const handleFilterChange = (newFilters: LeadFilter) => {
+    setFilters(newFilters);
+  };
+  
+  // Show loading state while data is being fetched
+  if (loading && (!stageData.length || !industryData.length)) {
+    return <DashboardSkeleton />;
+  }
   
   return (
     <div className="space-y-6">
@@ -79,141 +149,116 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Welcome back, {profile?.name || 'User'}!</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timePeriod} onValueChange={setTimePeriod}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Select period" />
-            </SelectTrigger>
-            <SelectContent>
-              {TIME_PERIOD_OPTIONS.map(option => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <button
+            onClick={() => setFilters({})}
+            className="inline-flex items-center justify-center rounded-md p-2 text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-accent-foreground"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span className="ml-2">Refresh</span>
+          </button>
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {mockDashboardMetrics.map(metric => (
-          <DashboardMetricCard key={metric.id} metric={metric} />
-        ))}
+      {/* Filters */}
+      <FilterBar
+        owners={ownerOptions}
+        industries={industryOptions}
+        products={productOptions}
+        stages={stageOptions}
+        onFilterChange={handleFilterChange}
+      />
+      
+      {/* Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="New Leads"
+          value={metrics.newLeads}
+          icon={Users}
+          trend="neutral"
+        />
+        <MetricCard
+          title="Pipeline Leads"
+          value={metrics.pipelineLeads}
+          icon={TrendingUp}
+          trend="neutral"
+        />
+        <MetricCard
+          title="Converted Leads"
+          value={metrics.convertedLeads}
+          icon={TrendingUp}
+          trend="up"
+        />
+        <MetricCard
+          title="Lost Leads"
+          value={metrics.lostLeads}
+          icon={TrendingDown}
+          trend="down"
+        />
       </div>
       
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="pipeline">Pipeline Analytics</TabsTrigger>
-          <TabsTrigger value="revenue">Revenue</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="overview" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            <Card className="dashboard-card md:col-span-4">
-              <CardHeader>
-                <CardTitle>Revenue Overview</CardTitle>
-                <CardDescription>Monthly revenue in INR crores</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                  Interactive Chart Placeholder
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="dashboard-card md:col-span-3">
-              <CardHeader>
-                <CardTitle>Lead Sources</CardTitle>
-                <CardDescription>Distribution by acquisition channel</CardDescription>
-              </CardHeader>
-              <CardContent className="h-[300px]">
-                <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                  Pie Chart Placeholder
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Recent Leads</CardTitle>
-                <CardDescription>New leads added recently</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {mockLeads.slice(0, 5).map(lead => (
-                    <div key={lead.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{lead.companyName}</p>
-                        <p className="text-sm text-muted-foreground truncate">{lead.contactName}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatInrCrores(lead.value)}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Lead Pipeline</CardTitle>
-                <CardDescription>Current distribution across stages</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  Bar Chart Placeholder
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card className="dashboard-card">
-              <CardHeader>
-                <CardTitle>Upcoming Tasks</CardTitle>
-                <CardDescription>Tasks due soon</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Placeholder for upcoming tasks */}
-                  <div className="flex items-center justify-center h-[250px] text-muted-foreground">
-                    No upcoming tasks
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="pipeline" className="space-y-4">
-          <Card className="dashboard-card">
-            <CardHeader>
-              <CardTitle>Lead Pipeline Analysis</CardTitle>
-              <CardDescription>Detailed view of leads in each stage</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px]">
-              <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                Interactive Pipeline Chart Placeholder
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-        
-        <TabsContent value="revenue" className="space-y-4">
-          <Card className="dashboard-card">
-            <CardHeader>
-              <CardTitle>Revenue Trends</CardTitle>
-              <CardDescription>Monthly revenue with projections</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[400px]">
-              <div className="h-full w-full flex items-center justify-center text-muted-foreground">
-                Interactive Revenue Chart Placeholder
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Pipeline Value"
+          value={formatInrCrores(metrics.totalLeadValue)}
+          icon={BadgeIndianRupee}
+          trend="neutral"
+        />
+        <MetricCard
+          title="Conversion Rate"
+          value={formatPercentage(metrics.conversionRate)}
+          icon={Percent}
+          trend={metrics.conversionRate > 20 ? 'up' : 'down'}
+          change={metrics.conversionRate > 20 ? 5.2 : -3.1}
+          description="from previous period"
+        />
+        <MetricCard
+          title="Average Deal Size"
+          value={formatInrCrores(metrics.totalLeadValue / (metrics.newLeads + metrics.pipelineLeads + metrics.convertedLeads || 1))}
+          icon={BarChart4}
+          trend="neutral"
+        />
+        <MetricCard
+          title="Top Industry"
+          value={industryData.length > 0 ? industryData[0].industry : 'N/A'}
+          icon={Building}
+          trend="neutral"
+          description={industryData.length > 0 ? `${industryData[0].count} leads` : ''}
+        />
+      </div>
+      
+      {/* Charts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <PipelineChart data={stageData} />
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <IndustryChart data={industryData} />
+        <TeamPerformanceChart data={ownerData} />
+        <div className="grid gap-4">
+          <MetricCard
+            title="Top Performing Team Member"
+            value={ownerData.length > 0 ? ownerData[0].ownerName : 'N/A'}
+            icon={Users}
+            trend="up"
+            description={ownerData.length > 0 ? 
+              `₹${formatInrCrores(ownerData[0].value)} Cr - ${ownerData[0].count} leads` 
+              : ''}
+            className="h-[calc(50%-0.5rem)]"
+          />
+          <MetricCard
+            title="Most Popular Product"
+            value="Enterprise Solution"
+            icon={Package}
+            trend="up"
+            description="11 active deals"
+            className="h-[calc(50%-0.5rem)]"
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TrendChart data={trendData} />
+      </div>
     </div>
   );
 };

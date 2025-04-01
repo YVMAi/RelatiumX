@@ -1,4 +1,3 @@
-
 import { Database } from '@/integrations/supabase/types';
 
 // Export type-safe tables from the Database type
@@ -23,12 +22,7 @@ export type LeadMessage = Tables['lead_messages']['Row'] & {
 };
 export type MessageMention = Tables['message_mentions']['Row'];
 export type MessageAttachment = Tables['message_attachments']['Row'];
-export type MessageReadReceipt = {
-  id: string;
-  message_id: string;
-  user_id: string;
-  read_at: string;
-};
+export type MessageReadReceipt = Tables['message_read_receipts']['Row'];
 
 // Define type-safe insert types
 export type ProfileInsert = Tables['profiles']['Insert'];
@@ -41,11 +35,7 @@ export type LeadMessageInsert = Tables['lead_messages']['Insert'] & {
 };
 export type MessageMentionInsert = Tables['message_mentions']['Insert'];
 export type MessageAttachmentInsert = Tables['message_attachments']['Insert'];
-export type MessageReadReceiptInsert = {
-  message_id: string;
-  user_id: string;
-  read_at?: string;
-};
+export type MessageReadReceiptInsert = Tables['message_read_receipts']['Insert'];
 
 // Type-safe enum types
 export type LeadStatus = Database['public']['Enums']['lead_status'];
