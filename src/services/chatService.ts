@@ -9,7 +9,7 @@ export const fetchLeadMessages = async (leadId: number) => {
       .from('lead_messages')
       .select(`
         *,
-        profiles:user_id(*),
+        profiles!lead_messages_user_id_fkey(*),
         mentions:message_mentions(*),
         attachments:message_attachments(*)
       `)
@@ -36,7 +36,7 @@ export const sendMessage = async (message: LeadMessageInsert) => {
       .insert(message)
       .select(`
         *,
-        profiles:user_id(*),
+        profiles!lead_messages_user_id_fkey(*),
         mentions:message_mentions(*),
         attachments:message_attachments(*)
       `)
@@ -67,7 +67,7 @@ export const updateMessage = async (messageId: string, message: string) => {
       .eq('id', messageId)
       .select(`
         *,
-        profiles:user_id(*),
+        profiles!lead_messages_user_id_fkey(*),
         mentions:message_mentions(*),
         attachments:message_attachments(*)
       `)

@@ -4,7 +4,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Send, ChevronDown, PaperclipIcon } from 'lucide-react';
+import { Send, ChevronDown } from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { MentionInput } from './MentionInput';
 import { 
