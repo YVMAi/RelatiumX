@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, LeadContact, LeadInsert } from "@/types";
 
@@ -73,10 +74,20 @@ export const fetchLeadTeamMembers = async (leadId: number) => {
 
 export const createLead = async (lead: LeadInsert) => {
   try {
-    console.log('Creating lead with data:', lead);
+    // Sanitize the data before sending to the database
+    const sanitizedLead = {
+      ...lead,
+      // Ensure stage_id is a valid number or null
+      stage_id: lead.stage_id !== undefined && lead.stage_id !== null && !isNaN(Number(lead.stage_id)) 
+        ? Number(lead.stage_id) 
+        : null
+    };
+    
+    console.log('Creating lead with data:', sanitizedLead);
+    
     const { data, error } = await supabase
       .from('leads')
-      .insert(lead)
+      .insert(sanitizedLead)
       .select()
       .single();
 
@@ -95,10 +106,20 @@ export const createLead = async (lead: LeadInsert) => {
 
 export const updateLead = async (id: number, updates: Partial<LeadInsert>) => {
   try {
-    console.log('Updating lead with ID:', id, 'and data:', updates);
+    // Sanitize the data before sending to the database
+    const sanitizedUpdates = {
+      ...updates,
+      // Ensure stage_id is a valid number or null
+      stage_id: updates.stage_id !== undefined && updates.stage_id !== null && !isNaN(Number(updates.stage_id)) 
+        ? Number(updates.stage_id) 
+        : null
+    };
+    
+    console.log('Updating lead with ID:', id, 'and data:', sanitizedUpdates);
+    
     const { data, error } = await supabase
       .from('leads')
-      .update(updates)
+      .update(sanitizedUpdates)
       .eq('id', id)
       .select()
       .single();

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
@@ -19,6 +20,10 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import {
+  RadioGroup,
+  RadioGroupItem
+} from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Lead, LeadTag, LeadContact, LeadInsert, Task } from '@/types';
@@ -132,11 +137,17 @@ const LeadForm = () => {
     }
     
     try {
+      // Convert stage_id to a number for database compatibility
+      const stageIdValue = lead.stage_id ? parseInt(lead.stage_id.toString(), 10) : null;
+      
       const leadData: LeadInsert = {
         ...lead as LeadInsert,
+        stage_id: stageIdValue,
         owner_id: selectedOwner,
         products: selectedProducts
       };
+      
+      console.log("Saving lead with data:", leadData);
       
       let savedLeadId: number;
       
@@ -268,7 +279,7 @@ const LeadForm = () => {
             <div className="space-y-2">
               <Label htmlFor="stage_id">Status</Label>
               <Select
-                value={lead.stage_id?.toString()}
+                value={lead.stage_id ? lead.stage_id.toString() : ''}
                 onValueChange={(value) => handleSelectChange('stage_id', value)}
               >
                 <SelectTrigger>
