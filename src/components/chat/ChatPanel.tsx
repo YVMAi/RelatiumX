@@ -1,10 +1,11 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
-import { Send, ChevronDown } from 'lucide-react';
+import { Send, ChevronDown, Paperclip, FileImage, X } from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { MentionInput } from './MentionInput';
 import { 
@@ -15,7 +16,12 @@ import {
   subscribeToLeadMessages,
   fetchMentionableUsers,
   parseMessageForMentions,
-  addMentions
+  addMentions,
+  uploadAttachment,
+  addAttachment,
+  markMessageAsDelivered,
+  markMessageAsRead,
+  fetchLeadTeamMembers
 } from '@/services/chatService';
 import { Profile } from '@/types/supabase';
 
@@ -31,10 +37,14 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
   const [isSending, setIsSending] = useState(false);
   const [mentionableUsers, setMentionableUsers] = useState<Profile[]>([]);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [teamMembers, setTeamMembers] = useState<Profile[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{[key: string]: number}>({});
   const { toast } = useToast();
   const { user } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load initial messages
   useEffect(() => {
@@ -43,6 +53,15 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
       try {
         const data = await fetchLeadMessages(leadId);
         setMessages(data || []);
+        
+        // Mark all messages as delivered
+        if (data && data.length > 0 && user) {
+          data.forEach(msg => {
+            if (msg.message_status === 'sent' && msg.user_id !== user.id) {
+              markMessageAsDelivered(msg.id);
+            }
+          });
+        }
       } catch (error) {
         console.error('Error loading messages:', error);
         toast({
@@ -66,10 +85,20 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         console.error('Error loading mentionable users:', error);
       }
     };
+    
+    const loadTeamMembers = async () => {
+      try {
+        const members = await fetchLeadTeamMembers(leadId);
+        setTeamMembers(members);
+      } catch (error) {
+        console.error('Error loading team members:', error);
+      }
+    };
 
     loadMessages();
     loadMentionableUsers();
-  }, [leadId, toast]);
+    loadTeamMembers();
+  }, [leadId, toast, user]);
 
   // Subscribe to real-time updates
   useEffect(() => {
@@ -88,10 +117,19 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         const updatedMessages = [...prev, newMessage];
         const isAtBottom = isScrolledToBottom();
         
+        // Mark delivered if not own message
+        if (user && newMessage.user_id !== user.id) {
+          markMessageAsDelivered(newMessage.id);
+        }
+        
         if (!isAtBottom) {
           setHasNewMessages(true);
         } else {
           setTimeout(scrollToBottom, 100);
+          // Mark as read if at bottom
+          if (user && newMessage.user_id !== user.id) {
+            markMessageAsRead(newMessage.id, user.id);
+          }
         }
         
         return updatedMessages;
@@ -122,7 +160,35 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, [leadId]);
+  }, [leadId, user]);
+
+  // Mark messages as read when they become visible
+  useEffect(() => {
+    if (!user || !messages.length) return;
+    
+    const markVisibleMessagesAsRead = () => {
+      const unreadMessages = messages.filter(
+        msg => msg.user_id !== user.id && msg.message_status !== 'read'
+      );
+      
+      if (unreadMessages.length > 0 && isScrolledToBottom()) {
+        unreadMessages.forEach(msg => {
+          markMessageAsRead(msg.id, user.id);
+        });
+      }
+    };
+    
+    markVisibleMessagesAsRead();
+    
+    // Add scroll event listener to mark messages as read when scrolled into view
+    const scrollElement = scrollAreaRef.current;
+    if (scrollElement) {
+      scrollElement.addEventListener('scroll', markVisibleMessagesAsRead);
+      return () => {
+        scrollElement.removeEventListener('scroll', markVisibleMessagesAsRead);
+      };
+    }
+  }, [messages, user]);
 
   // Scroll to bottom when messages change
   const scrollToBottom = () => {
@@ -143,9 +209,25 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     return scrollBottom >= scrollHeight - 100;
   };
 
+  // Handle file selection
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setUploadingFiles(prev => [...prev, ...newFiles]);
+      
+      // Reset the input to allow selecting the same file again
+      e.target.value = '';
+    }
+  };
+  
+  // Remove a file from upload queue
+  const removeFile = (index: number) => {
+    setUploadingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   // Handle sending a new message
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !user?.id || isSending) return;
+    if ((!newMessage.trim() && uploadingFiles.length === 0) || !user?.id || isSending) return;
     
     setIsSending(true);
     
@@ -158,12 +240,50 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         lead_id: leadId,
         user_id: user.id,
         message: newMessage.trim(),
-        has_attachments: false
+        has_attachments: uploadingFiles.length > 0
       });
       
       // Add mentions if any
       if (mentionedUserIds.length > 0 && sentMessage) {
         await addMentions(sentMessage.id, mentionedUserIds);
+      }
+      
+      // Upload attachments if any
+      if (uploadingFiles.length > 0 && sentMessage) {
+        for (let i = 0; i < uploadingFiles.length; i++) {
+          const file = uploadingFiles[i];
+          const fileKey = `${file.name}-${i}`;
+          
+          try {
+            setUploadProgress(prev => ({ ...prev, [fileKey]: 0 }));
+            
+            // Upload the file
+            const uploadedFile = await uploadAttachment(file, leadId);
+            
+            setUploadProgress(prev => ({ ...prev, [fileKey]: 50 }));
+            
+            // Add attachment record
+            await addAttachment(sentMessage.id, {
+              file_path: uploadedFile.path,
+              file_name: uploadedFile.name,
+              file_size: uploadedFile.size,
+              file_type: uploadedFile.type,
+            });
+            
+            setUploadProgress(prev => ({ ...prev, [fileKey]: 100 }));
+          } catch (error) {
+            console.error(`Error uploading file ${file.name}:`, error);
+            toast({
+              title: 'Upload Failed',
+              description: `Failed to upload ${file.name}`,
+              variant: 'destructive'
+            });
+          }
+        }
+        
+        // Clear uploaded files
+        setUploadingFiles([]);
+        setUploadProgress({});
       }
       
       // Clear input
@@ -254,6 +374,8 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
                   createdAt={msg.created_at}
                   updatedAt={msg.updated_at}
                   isEdited={msg.is_edited}
+                  messageStatus={msg.message_status}
+                  attachments={msg.attachments}
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
                   mentionableUsers={mentionableUsers}
@@ -277,6 +399,36 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         )}
       </div>
       
+      {/* File upload preview */}
+      {uploadingFiles.length > 0 && (
+        <div className="p-2 border-t">
+          <div className="text-sm font-medium mb-1">Attachments</div>
+          <div className="flex flex-wrap gap-2">
+            {uploadingFiles.map((file, index) => (
+              <div 
+                key={`${file.name}-${index}`} 
+                className="flex items-center gap-2 p-2 bg-muted rounded-md"
+              >
+                {file.type.startsWith('image/') ? (
+                  <FileImage className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-xs truncate max-w-[150px]">{file.name}</span>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-5 w-5" 
+                  onClick={() => removeFile(index)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       <div className="p-3 border-t">
         <div className="flex gap-2">
           <MentionInput
@@ -287,9 +439,24 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
             className="flex-1"
             disabled={!user}
           />
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            className="hidden"
+            multiple
+          />
+          <Button 
+            variant="outline"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSending || !user}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
           <Button 
             onClick={handleSendMessage}
-            disabled={!newMessage.trim() || isSending || !user}
+            disabled={((!newMessage.trim() && uploadingFiles.length === 0) || isSending || !user)}
           >
             {isSending ? (
               <div className="h-4 w-4 border-2 border-t-transparent border-primary-foreground rounded-full animate-spin" />

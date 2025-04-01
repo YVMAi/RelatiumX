@@ -232,3 +232,160 @@ export const fetchMentionableUsers = async (): Promise<Profile[]> => {
     return [];
   }
 };
+
+// Upload a file attachment for a message
+export const uploadAttachment = async (
+  file: File,
+  leadId: number
+): Promise<{ path: string; name: string; size: number; type: string }> => {
+  try {
+    const fileExt = file.name.split('.').pop();
+    const filePath = `lead_${leadId}/${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('chat_attachments')
+      .upload(filePath, file);
+    
+    if (uploadError) {
+      console.error('Error uploading file:', uploadError);
+      throw uploadError;
+    }
+    
+    return {
+      path: filePath,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    };
+  } catch (error) {
+    console.error('Error in uploadAttachment:', error);
+    throw error;
+  }
+};
+
+// Add an attachment to a message
+export const addAttachment = async (messageId: string, fileInfo: {
+  file_path: string;
+  file_name: string;
+  file_size: number;
+  file_type: string;
+}) => {
+  try {
+    const attachment: MessageAttachmentInsert = {
+      message_id: messageId,
+      file_path: fileInfo.file_path,
+      file_name: fileInfo.file_name,
+      file_size: fileInfo.file_size,
+      file_type: fileInfo.file_type,
+    };
+    
+    const { data, error } = await supabase
+      .from('message_attachments')
+      .insert(attachment)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error adding attachment:', error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in addAttachment:', error);
+    throw error;
+  }
+};
+
+// Download an attachment
+export const downloadAttachment = async (filePath: string): Promise<string> => {
+  try {
+    const { data, error } = await supabase.storage
+      .from('chat_attachments')
+      .createSignedUrl(filePath, 60); // 60 seconds expiry
+    
+    if (error) {
+      console.error('Error creating signed URL:', error);
+      throw error;
+    }
+    
+    return data.signedUrl;
+  } catch (error) {
+    console.error('Error in downloadAttachment:', error);
+    throw error;
+  }
+};
+
+// Mark message as delivered for a user
+export const markMessageAsDelivered = async (messageId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('lead_messages')
+      .update({ message_status: 'delivered' })
+      .eq('id', messageId)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error marking message as delivered:', error);
+      throw error;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in markMessageAsDelivered:', error);
+    throw error;
+  }
+};
+
+// Mark message as read by a user
+export const markMessageAsRead = async (messageId: string, userId: string) => {
+  try {
+    // Update message status if needed
+    await supabase
+      .from('lead_messages')
+      .update({ message_status: 'read' })
+      .eq('id', messageId);
+    
+    // Add read receipt
+    const { error } = await supabase
+      .from('message_read_receipts')
+      .upsert({ 
+        message_id: messageId, 
+        user_id: userId, 
+        read_at: new Date().toISOString()
+      }, {
+        onConflict: 'message_id,user_id'
+      });
+    
+    if (error) {
+      console.error('Error adding read receipt:', error);
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error in markMessageAsRead:', error);
+    throw error;
+  }
+};
+
+// Fetch team members who can access the lead chat
+export const fetchLeadTeamMembers = async (leadId: number): Promise<Profile[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('lead_team')
+      .select('user_id, profiles(*)')
+      .eq('lead_id', leadId);
+    
+    if (error) {
+      console.error('Error fetching lead team members:', error);
+      throw error;
+    }
+    
+    return data.map((member: any) => member.profiles) || [];
+  } catch (error) {
+    console.error('Error in fetchLeadTeamMembers:', error);
+    return [];
+  }
+};

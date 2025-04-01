@@ -2,10 +2,10 @@
 import { useState } from 'react';
 import { formatDate } from '@/utils/format';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
-import { Edit, Trash2, Check, X } from 'lucide-react';
+import { Edit, Trash2, Check, X, Clock, CheckCheck } from 'lucide-react';
 import { MentionInput } from './MentionInput';
+import { AttachmentItem } from './AttachmentItem';
 import { Profile } from '@/types/supabase';
 
 type MessageItemProps = {
@@ -15,6 +15,8 @@ type MessageItemProps = {
   createdAt: string;
   updatedAt: string;
   isEdited: boolean;
+  messageStatus: string;
+  attachments: any[];
   onEdit: (id: string, newMessage: string) => void;
   onDelete: (id: string) => void;
   mentionableUsers: Profile[];
@@ -27,6 +29,8 @@ export const MessageItem = ({
   createdAt,
   updatedAt,
   isEdited,
+  messageStatus,
+  attachments = [],
   onEdit,
   onDelete,
   mentionableUsers,
@@ -66,6 +70,23 @@ export const MessageItem = ({
     } else if (e.key === 'Escape') {
       handleCancelEdit();
     }
+  };
+
+  // Render message status icon
+  const renderMessageStatus = () => {
+    if (isOwnMessage) {
+      switch (messageStatus) {
+        case 'sent':
+          return <Clock className="h-3 w-3 text-muted-foreground" />;
+        case 'delivered':
+          return <Check className="h-3 w-3 text-muted-foreground" />;
+        case 'read':
+          return <CheckCheck className="h-3 w-3 text-blue-500" />;
+        default:
+          return null;
+      }
+    }
+    return null;
   };
 
   return (
@@ -122,35 +143,57 @@ export const MessageItem = ({
                 </div>
               </div>
             ) : (
-              <div 
-                className="whitespace-pre-wrap break-words"
-                dangerouslySetInnerHTML={{ 
-                  __html: highlightMentions(message)
-                }}
-              />
+              <>
+                <div 
+                  className="whitespace-pre-wrap break-words"
+                  dangerouslySetInnerHTML={{ 
+                    __html: highlightMentions(message)
+                  }}
+                />
+                
+                {/* Attachments */}
+                {attachments && attachments.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {attachments.map(attachment => (
+                      <AttachmentItem
+                        key={attachment.id}
+                        id={attachment.id}
+                        filePath={attachment.file_path}
+                        fileName={attachment.file_name}
+                        fileSize={attachment.file_size}
+                        fileType={attachment.file_type}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
           
-          {isOwnMessage && !isEditing && (
-            <div className="mt-1 flex gap-1">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2" 
-                onClick={() => setIsEditing(true)}
-              >
-                <Edit className="h-3.5 w-3.5" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="h-7 px-2 text-destructive hover:text-destructive" 
-                onClick={() => onDelete(id)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          )}
+          <div className="mt-1 flex items-center gap-2">
+            {renderMessageStatus()}
+            
+            {isOwnMessage && !isEditing && (
+              <div className="flex gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2" 
+                  onClick={() => setIsEditing(true)}
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 px-2 text-destructive hover:text-destructive" 
+                  onClick={() => onDelete(id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
