@@ -16,6 +16,9 @@ export type AuditLog = Tables['audit_logs']['Row'];
 export type LeadChangeLog = Tables['lead_change_logs']['Row'];
 export type Role = Tables['roles']['Row'];
 export type LeadMessage = Tables['lead_messages']['Row'] & {
+  profiles?: Profile;
+  mentions?: MessageMention[];
+  attachments?: MessageAttachment[];
   message_status?: 'sent' | 'delivered' | 'read';
 };
 export type MessageMention = Tables['message_mentions']['Row'];

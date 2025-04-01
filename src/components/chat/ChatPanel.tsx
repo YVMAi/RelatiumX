@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -46,7 +45,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load initial messages
   useEffect(() => {
     const loadMessages = async () => {
       setIsLoading(true);
@@ -54,7 +52,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         const data = await fetchLeadMessages(leadId);
         setMessages(data || []);
         
-        // Mark all messages as delivered
         if (data && data.length > 0 && user) {
           data.forEach(msg => {
             if (msg.message_status === 'sent' && msg.user_id !== user.id) {
@@ -100,16 +97,13 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     loadTeamMembers();
   }, [leadId, toast, user]);
 
-  // Subscribe to real-time updates
   useEffect(() => {
     if (!leadId) return;
 
     const handleInsert = (payload: any) => {
       const newMessage = payload.new as LeadMessage;
       
-      // Add the new message to the messages list
       setMessages(prev => {
-        // Check if message already exists to prevent duplicates
         if (prev.some(msg => msg.id === newMessage.id)) {
           return prev;
         }
@@ -117,7 +111,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         const updatedMessages = [...prev, newMessage];
         const isAtBottom = isScrolledToBottom();
         
-        // Mark delivered if not own message
         if (user && newMessage.user_id !== user.id) {
           markMessageAsDelivered(newMessage.id);
         }
@@ -126,7 +119,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
           setHasNewMessages(true);
         } else {
           setTimeout(scrollToBottom, 100);
-          // Mark as read if at bottom
           if (user && newMessage.user_id !== user.id) {
             markMessageAsRead(newMessage.id, user.id);
           }
@@ -148,7 +140,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
       setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id));
     };
 
-    // Subscribe to changes
     const subscription = subscribeToLeadMessages(
       leadId,
       handleInsert,
@@ -156,13 +147,11 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
       handleDelete
     );
 
-    // Cleanup subscription on unmount
     return () => {
       subscription.unsubscribe();
     };
   }, [leadId, user]);
 
-  // Mark messages as read when they become visible
   useEffect(() => {
     if (!user || !messages.length) return;
     
@@ -180,7 +169,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     
     markVisibleMessagesAsRead();
     
-    // Add scroll event listener to mark messages as read when scrolled into view
     const scrollElement = scrollAreaRef.current;
     if (scrollElement) {
       scrollElement.addEventListener('scroll', markVisibleMessagesAsRead);
@@ -190,7 +178,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     }
   }, [messages, user]);
 
-  // Scroll to bottom when messages change
   const scrollToBottom = () => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -198,44 +185,36 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     }
   };
 
-  // Check if scrolled to bottom
   const isScrolledToBottom = () => {
     if (!scrollAreaRef.current) return true;
     
     const { scrollTop, scrollHeight, clientHeight } = scrollAreaRef.current;
     const scrollBottom = scrollTop + clientHeight;
     
-    // Consider "at bottom" if within 100px of actual bottom
     return scrollBottom >= scrollHeight - 100;
   };
 
-  // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
       setUploadingFiles(prev => [...prev, ...newFiles]);
       
-      // Reset the input to allow selecting the same file again
       e.target.value = '';
     }
   };
-  
-  // Remove a file from upload queue
+
   const removeFile = (index: number) => {
     setUploadingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Handle sending a new message
   const handleSendMessage = async () => {
     if ((!newMessage.trim() && uploadingFiles.length === 0) || !user?.id || isSending) return;
     
     setIsSending(true);
     
     try {
-      // Extract mentions
       const mentionedUserIds = parseMessageForMentions(newMessage, mentionableUsers);
       
-      // Send the message
       const sentMessage = await sendMessage({
         lead_id: leadId,
         user_id: user.id,
@@ -243,12 +222,10 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         has_attachments: uploadingFiles.length > 0
       });
       
-      // Add mentions if any
       if (mentionedUserIds.length > 0 && sentMessage) {
         await addMentions(sentMessage.id, mentionedUserIds);
       }
       
-      // Upload attachments if any
       if (uploadingFiles.length > 0 && sentMessage) {
         for (let i = 0; i < uploadingFiles.length; i++) {
           const file = uploadingFiles[i];
@@ -257,12 +234,10 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
           try {
             setUploadProgress(prev => ({ ...prev, [fileKey]: 0 }));
             
-            // Upload the file
             const uploadedFile = await uploadAttachment(file, leadId);
             
             setUploadProgress(prev => ({ ...prev, [fileKey]: 50 }));
             
-            // Add attachment record
             await addAttachment(sentMessage.id, {
               file_path: uploadedFile.path,
               file_name: uploadedFile.name,
@@ -281,12 +256,10 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
           }
         }
         
-        // Clear uploaded files
         setUploadingFiles([]);
         setUploadProgress({});
       }
       
-      // Clear input
       setNewMessage('');
       scrollToBottom();
     } catch (error) {
@@ -301,7 +274,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     }
   };
 
-  // Handle editing a message
   const handleEditMessage = async (id: string, newText: string) => {
     try {
       await updateMessage(id, newText);
@@ -315,7 +287,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     }
   };
 
-  // Handle deleting a message
   const handleDeleteMessage = async (id: string) => {
     try {
       await deleteMessage(id);
@@ -373,9 +344,9 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
                   user={msg.profiles}
                   createdAt={msg.created_at}
                   updatedAt={msg.updated_at}
-                  isEdited={msg.is_edited}
+                  isEdited={msg.is_edited || false}
                   messageStatus={msg.message_status}
-                  attachments={msg.attachments}
+                  attachments={msg.attachments || []}
                   onEdit={handleEditMessage}
                   onDelete={handleDeleteMessage}
                   mentionableUsers={mentionableUsers}
@@ -399,7 +370,6 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
         )}
       </div>
       
-      {/* File upload preview */}
       {uploadingFiles.length > 0 && (
         <div className="p-2 border-t">
           <div className="text-sm font-medium mb-1">Attachments</div>

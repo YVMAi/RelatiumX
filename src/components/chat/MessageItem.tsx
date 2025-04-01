@@ -6,7 +6,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Edit, Trash2, Check, X, Clock, CheckCheck } from 'lucide-react';
 import { MentionInput } from './MentionInput';
 import { AttachmentItem } from './AttachmentItem';
-import { Profile } from '@/types/supabase';
+import { Profile, MessageAttachment } from '@/types/supabase';
 
 type MessageItemProps = {
   id: string;
@@ -15,8 +15,8 @@ type MessageItemProps = {
   createdAt: string;
   updatedAt: string;
   isEdited: boolean;
-  messageStatus: string;
-  attachments: any[];
+  messageStatus?: string;
+  attachments: MessageAttachment[];
   onEdit: (id: string, newMessage: string) => void;
   onDelete: (id: string) => void;
   mentionableUsers: Profile[];
