@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { LeadMessage, LeadMessageInsert, MessageMentionInsert, MessageAttachmentInsert, Profile, MessageReadReceiptInsert } from "@/types/supabase";
 
@@ -352,18 +353,17 @@ export const markMessageAsRead = async (messageId: string, userId: string) => {
       })
       .eq('id', messageId);
     
-    // Add read receipt
-    const readReceipt: MessageReadReceiptInsert = {
-      message_id: messageId,
-      user_id: userId,
-      read_at: new Date().toISOString()
-    };
-    
-    const { error } = await supabase.rpc('upsert_read_receipt', {
-      p_message_id: messageId,
-      p_user_id: userId,
-      p_read_at: new Date().toISOString()
-    });
+    // We need to manually insert the read receipt instead of using RPC
+    // since the TypeScript types don't recognize our custom RPC function
+    const { error } = await supabase
+      .from('message_read_receipts')
+      .upsert({
+        message_id: messageId,
+        user_id: userId,
+        read_at: new Date().toISOString()
+      }, {
+        onConflict: 'message_id,user_id'
+      });
     
     if (error) {
       console.error('Error adding read receipt:', error);

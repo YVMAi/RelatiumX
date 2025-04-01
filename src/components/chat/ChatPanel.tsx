@@ -23,7 +23,7 @@ import {
   markMessageAsRead,
   fetchLeadTeamMembers
 } from '@/services/chatService';
-import { Profile } from '@/types/supabase';
+import { Profile, LeadMessage } from '@/types/supabase';
 
 interface ChatPanelProps {
   leadId: number;
@@ -31,7 +31,7 @@ interface ChatPanelProps {
 }
 
 export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<LeadMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
@@ -105,7 +105,7 @@ export const ChatPanel = ({ leadId, leadName }: ChatPanelProps) => {
     if (!leadId) return;
 
     const handleInsert = (payload: any) => {
-      const newMessage = payload.new;
+      const newMessage = payload.new as LeadMessage;
       
       // Add the new message to the messages list
       setMessages(prev => {
