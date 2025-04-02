@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   CalendarIcon, 
@@ -40,6 +39,7 @@ import { DashboardStats, DateRange, IndustryData, TeamPerformanceData, StageData
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
 
 const Dashboard: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -55,7 +55,6 @@ const Dashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Colors for industry chart
   const industryColors = [
     "#4361EE", "#3A86FF", "#4CC9F0", "#4895EF", "#560BAD", 
     "#F72585", "#7209B7", "#B5179E", "#480CA8", "#3F37C9"
@@ -69,7 +68,6 @@ const Dashboard: React.FC = () => {
     try {
       setIsLoading(true);
 
-      // Construct filters
       const filters = {
         dateRange: {
           startDate: dateRange.startDate,
@@ -78,32 +76,27 @@ const Dashboard: React.FC = () => {
         owners: selectedOwners.length > 0 ? selectedOwners : undefined
       };
 
-      // Fetch all required data
       const metrics = await fetchDashboardMetrics(filters);
       const stageData = await fetchLeadsByStage(filters);
       const industryData = await fetchLeadsByIndustry(filters);
       const teamData = await fetchLeadsByOwner(filters);
       const trendData = await fetchLeadTrends(filters);
 
-      // Process dashboard stats
       const totalLeads = metrics.newLeads + metrics.pipelineLeads + metrics.convertedLeads + metrics.lostLeads;
       const averageDealSize = totalLeads > 0 ? metrics.totalLeadValue / totalLeads : 0;
       
-      // Find top industry
       let topIndustry = { name: 'None', count: 0 };
       if (industryData.length > 0) {
         const sortedIndustries = [...industryData].sort((a, b) => b.count - a.count);
         topIndustry = { name: sortedIndustries[0].industry, count: sortedIndustries[0].count };
       }
 
-      // Find top performer
       let topPerformer = { name: 'None', leads: 0 };
       if (teamData.length > 0) {
         const sortedTeam = [...teamData].sort((a, b) => b.count - a.count);
         topPerformer = { name: sortedTeam[0].ownerName, leads: sortedTeam[0].count };
       }
 
-      // Popular product (placeholder - we'd need actual product data)
       const popularProduct = { name: 'Enterprise Solution', count: 10 };
 
       setStats({
@@ -119,14 +112,12 @@ const Dashboard: React.FC = () => {
         popularProduct
       });
 
-      // Transform pipeline data
       setPipelineData(stageData.map(stage => ({
         name: stage.stageName,
         leadCount: stage.count,
         value: stage.value
       })));
 
-      // Transform industry data
       const totalCount = industryData.reduce((sum, item) => sum + item.count, 0);
       setIndustryData(
         industryData.map((industry, index) => ({
@@ -137,14 +128,12 @@ const Dashboard: React.FC = () => {
         }))
       );
 
-      // Transform team data
       setTeamData(teamData.map(owner => ({
         name: owner.ownerName,
         leads: owner.count,
         value: owner.value
       })));
 
-      // Set trend data
       setTrendData(trendData.map(item => ({
         date: item.date,
         newLeads: item.newLeads,
@@ -171,7 +160,6 @@ const Dashboard: React.FC = () => {
     });
   };
 
-  // Format date range for display
   const formatDateRange = () => {
     const start = new Date(dateRange.startDate);
     const end = new Date(dateRange.endDate);
@@ -180,7 +168,7 @@ const Dashboard: React.FC = () => {
 
   if (isLoading && !stats) {
     return (
-      <div className="container mx-auto py-10">
+      <div className="container mx-auto p-4">
         <div className="flex items-center justify-center h-[60vh]">
           <div className="flex flex-col items-center gap-2">
             <RefreshCw className="h-10 w-10 animate-spin text-muted-foreground" />
@@ -192,11 +180,10 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="container mx-auto py-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+    <div className="container mx-auto p-4 max-w-7xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, Yeah!</p>
         </div>
         <div className="flex items-center gap-2">
@@ -211,102 +198,108 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-8 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="w-[280px] justify-start text-left font-normal"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {formatDateRange()}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <div className="flex">
-                  <div className="p-2">
-                    <h4 className="mb-2 font-semibold">Start Date</h4>
-                    <DatePicker
-                      date={new Date(dateRange.startDate)}
-                      setDate={(date) => 
-                        setDateRange(prev => ({ 
-                          ...prev, 
-                          startDate: format(date || new Date(), 'yyyy-MM-dd') 
-                        }))
-                      }
-                    />
-                  </div>
-                  <div className="p-2">
-                    <h4 className="mb-2 font-semibold">End Date</h4>
-                    <DatePicker
-                      date={new Date(dateRange.endDate)}
-                      setDate={(date) => 
-                        setDateRange(prev => ({ 
-                          ...prev, 
-                          endDate: format(date || new Date(), 'yyyy-MM-dd') 
-                        }))
-                      }
-                    />
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+      <Card className="mb-6">
+        <CardContent className="p-4 pt-4">
+          <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full lg:w-auto">
+              <div className="w-full sm:w-auto">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-[280px] justify-start text-left font-normal"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formatDateRange()}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="flex flex-col sm:flex-row">
+                      <div className="p-2 border-b sm:border-b-0 sm:border-r">
+                        <h4 className="mb-2 font-semibold">Start Date</h4>
+                        <DatePicker
+                          date={new Date(dateRange.startDate)}
+                          setDate={(date) => 
+                            setDateRange(prev => ({ 
+                              ...prev, 
+                              startDate: format(date || new Date(), 'yyyy-MM-dd') 
+                            }))
+                          }
+                        />
+                      </div>
+                      <div className="p-2">
+                        <h4 className="mb-2 font-semibold">End Date</h4>
+                        <DatePicker
+                          date={new Date(dateRange.endDate)}
+                          setDate={(date) => 
+                            setDateRange(prev => ({ 
+                              ...prev, 
+                              endDate: format(date || new Date(), 'yyyy-MM-dd') 
+                            }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <Select>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Select owners" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Owners</SelectItem>
+                  <SelectItem value="john">John Doe</SelectItem>
+                  <SelectItem value="jane">Jane Smith</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button variant="outline" className="h-10 w-full sm:w-auto">
+                More Filters
+              </Button>
+            </div>
+
+            <Button className="h-10 w-full sm:w-auto" variant="default">
+              Apply Filters
+            </Button>
           </div>
+        </CardContent>
+      </Card>
 
-          <Select>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select owners" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Owners</SelectItem>
-              <SelectItem value="john">John Doe</SelectItem>
-              <SelectItem value="jane">Jane Smith</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" className="h-10">
-            More Filters
-          </Button>
-        </div>
-
-        <Button className="h-10" variant="default">
-          Apply Filters
-        </Button>
-      </div>
-
-      {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="New Leads"
           value={stats?.newLeads || 0}
           icon={Users}
+          className="shadow-sm"
         />
         <MetricCard
           title="Pipeline Leads"
           value={stats?.pipelineLeads || 0}
           icon={TrendingUp}
+          className="shadow-sm"
         />
         <MetricCard
           title="Converted Leads"
           value={stats?.convertedLeads || 0}
           icon={CheckCircle}
+          className="shadow-sm"
         />
         <MetricCard
           title="Lost Leads"
           value={stats?.lostLeads || 0}
           icon={XCircle}
+          className="shadow-sm"
         />
       </div>
 
-      {/* Value Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <MetricCard
           title="Total Pipeline Value"
           value={`₹ ${formatInrCrores(stats?.totalValue || 0)} Cr`}
           icon={DollarSign}
+          className="shadow-sm"
         />
         <MetricCard
           title="Conversion Rate"
@@ -315,73 +308,49 @@ const Dashboard: React.FC = () => {
           trend="down"
           description="from previous period"
           icon={Percent}
+          className="shadow-sm"
         />
         <MetricCard
           title="Average Deal Size"
           value={`₹ ${formatInrCrores(stats?.averageDealSize || 0)} Cr`}
           icon={BarChart3}
+          className="shadow-sm"
         />
         <MetricCard
           title="Top Industry"
           value={stats?.topIndustry?.name || "None"}
           description={`${stats?.topIndustry?.count || 0} leads`}
           icon={PieChart}
+          className="shadow-sm"
         />
       </div>
 
-      {/* Pipeline Chart */}
-      <div className="mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Pipeline by Stage</CardTitle>
-            <CardDescription>Number of leads and value at each stage</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[350px]">
-            <PipelineChart data={pipelineData.map(d => ({
-              stageId: 0,
-              stageName: d.name,
-              count: d.leadCount,
-              value: d.value
-            }))} />
-          </CardContent>
-        </Card>
+      <div className="mb-6">
+        <PipelineChart data={pipelineData.map(d => ({
+          stageId: 0,
+          stageName: d.name,
+          count: d.leadCount,
+          value: d.value
+        }))} />
       </div>
 
-      {/* Industry & Team Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Leads by Industry</CardTitle>
-            <CardDescription>Distribution of leads across industries</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <IndustryChart data={industryData.map(d => ({
-              industry: d.name,
-              count: d.value,
-              value: 0
-            }))} />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <IndustryChart data={industryData.map(d => ({
+          industry: d.name,
+          count: d.value,
+          value: 0
+        }))} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Team Performance</CardTitle>
-            <CardDescription>Leads managed by team members</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <TeamPerformanceChart data={teamData.map(d => ({
-              ownerId: '',
-              ownerName: d.name,
-              count: d.leads,
-              value: d.value
-            }))} />
-          </CardContent>
-        </Card>
+        <TeamPerformanceChart data={teamData.map(d => ({
+          ownerId: '',
+          ownerName: d.name,
+          count: d.leads,
+          value: d.value
+        }))} />
       </div>
 
-      {/* Additional Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle>Top Performing Team Member</CardTitle>
@@ -394,7 +363,7 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle>Most Popular Product</CardTitle>
@@ -408,22 +377,13 @@ const Dashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Trends Chart */}
-      <div className="mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Lead Trends</CardTitle>
-            <CardDescription>Monthly trends of new, converted, and lost leads</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <TrendChart data={trendData.map(d => ({
-              date: d.date,
-              newLeads: d.newLeads,
-              convertedLeads: d.convertedLeads,
-              lostLeads: d.lostLeads
-            }))} />
-          </CardContent>
-        </Card>
+      <div className="mb-6">
+        <TrendChart data={trendData.map(d => ({
+          date: d.date,
+          newLeads: d.newLeads,
+          convertedLeads: d.convertedLeads,
+          lostLeads: d.lostLeads
+        }))} />
       </div>
     </div>
   );
