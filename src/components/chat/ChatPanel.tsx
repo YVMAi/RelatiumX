@@ -150,7 +150,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ leadId, leadName }) => {
       </div>
 
       {/* Chat Messages */}
-      <ScrollArea className="flex-grow py-4" viewportRef={chatContainerRef}>
+      <ScrollArea className="flex-grow py-4" ref={chatContainerRef}>
         <div className="px-4 space-y-6">
           {Object.entries(groupedMessages).map(([date, groups], dateIndex) => (
             <div key={dateIndex} className="space-y-4">

@@ -230,8 +230,8 @@ const Dashboard: React.FC = () => {
                   <div className="p-2">
                     <h4 className="mb-2 font-semibold">Start Date</h4>
                     <DatePicker
-                      selected={new Date(dateRange.startDate)}
-                      onSelect={(date) => 
+                      date={new Date(dateRange.startDate)}
+                      setDate={(date) => 
                         setDateRange(prev => ({ 
                           ...prev, 
                           startDate: format(date || new Date(), 'yyyy-MM-dd') 
@@ -242,8 +242,8 @@ const Dashboard: React.FC = () => {
                   <div className="p-2">
                     <h4 className="mb-2 font-semibold">End Date</h4>
                     <DatePicker
-                      selected={new Date(dateRange.endDate)}
-                      onSelect={(date) => 
+                      date={new Date(dateRange.endDate)}
+                      setDate={(date) => 
                         setDateRange(prev => ({ 
                           ...prev, 
                           endDate: format(date || new Date(), 'yyyy-MM-dd') 
