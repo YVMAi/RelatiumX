@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -111,7 +110,6 @@ const Dashboard: React.FC = () => {
       
       const estimatedValue = parseFloat(values.estimated_value);
       
-      // Create a properly typed lead object with all required fields
       const newLead = {
         client_company: values.client_company,
         contact_name: values.contact_name,
@@ -119,7 +117,6 @@ const Dashboard: React.FC = () => {
         stage_id: parseInt(values.stage_id),
         estimated_value: estimatedValue,
         next_activity: values.next_activity.toISOString(),
-        // Add required fields with default values
         client_industry: "",
         contact_phone: "",
         contact_address: "",
@@ -170,7 +167,6 @@ const Dashboard: React.FC = () => {
       
       setLeadsByStage(leadsByStage);
       setTotalValue(totalValue);
-      // Ensure we cast recentLeads to the correct type
       setRecentLeads(recentLeads as unknown as Lead[]);
       setStages(formattedStages);
     } catch (error) {
