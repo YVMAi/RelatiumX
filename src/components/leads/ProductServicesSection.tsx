@@ -15,12 +15,10 @@ import { Plus, X } from 'lucide-react';
 
 // Default product/service options
 const DEFAULT_PRODUCTS = [
-  'TruGenie',
-  'TruGreen',
-  'TruCollect',
-  'AMC Infra',
-  'PMC Real Estate',
-  'Fund Raise',
+  'HealthX.AI - AI Clinic Management Agent',
+  'ProcureMate - AI Procurement Agent',
+  'SalesX - AI Agent for Sales',
+  'Custom AI Agents',
 ];
 
 type ProductServicesSectionProps = {
