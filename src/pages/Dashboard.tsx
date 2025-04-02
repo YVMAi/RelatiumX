@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,8 +55,8 @@ import {
   fetchDashboardData,
   fetchLeads,
   fetchLeadStages,
-  createLead as createLeadService
 } from "@/services/dashboardService";
+import { createLead as createLeadService } from "@/services/leadsService";
 import { Lead, LeadStage } from '@/types/dashboard';
 import { useNavigate } from 'react-router-dom';
 
@@ -125,7 +126,8 @@ const Dashboard: React.FC = () => {
         meeting_notes: "",
         website: "",
         product_service_interest: "",
-        products: []
+        products: [],
+        owner_id: null // Adding the missing owner_id property with null as default
       };
       
       await createLeadService(newLead);
