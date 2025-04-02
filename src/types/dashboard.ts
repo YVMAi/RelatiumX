@@ -1,5 +1,6 @@
 
-import { LeadStage } from "./supabase";
+// We're not importing LeadStage from supabase since we're defining it here
+// This was causing the conflict error
 
 export interface Lead {
   id: number;
@@ -16,4 +17,6 @@ export interface LeadStage {
   id: number;
   stage_name: string;
   sequence: number;
+  created_at?: string;
+  updated_at?: string;
 }
