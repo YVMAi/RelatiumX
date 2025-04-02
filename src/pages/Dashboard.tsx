@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -49,6 +48,13 @@ const mapToFilterOptions = (items: string[] | { id: string | number, name: strin
       return { value: String(item.id), label: item.name };
     }
   });
+};
+
+const getStageOptions = (stages: { id: number; stage_name: string }[]) => {
+  return stages.map(stage => ({
+    id: stage.id,
+    name: stage.stage_name
+  }));
 };
 
 const Dashboard = () => {

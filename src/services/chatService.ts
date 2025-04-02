@@ -342,38 +342,28 @@ export const markMessageAsDelivered = async (messageId: string) => {
 
 // Mark message as read by a user
 export const markMessageAsRead = async (messageId: string) => {
-  if (!messageId) return;
-  
   try {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    
-    // Check if a read receipt already exists
-    const { data: existingReceipt } = await supabase
+    const { data, error } = await supabase
       .from('message_read_receipts')
-      .select('id')
-      .eq('message_id', messageId)
-      .eq('user_id', user.id)
-      .single();
-    
-    if (existingReceipt) {
-      // Update the existing read receipt with current timestamp
-      await supabase
-        .from('message_read_receipts')
-        .update({ read_at: new Date().toISOString() })
-        .eq('id', existingReceipt.id);
-    } else {
-      // Insert a new read receipt
-      await supabase
-        .from('message_read_receipts')
-        .insert({
-          message_id: messageId,
-          user_id: user.id,
-          read_at: new Date().toISOString()
-        });
+      .upsert({
+        message_id: messageId,
+        user_id: supabase.auth.getUser().then(res => res.data.user?.id || ''),
+        read_at: new Date().toISOString(),
+      }, 
+      { 
+        onConflict: 'message_id,user_id',
+        ignoreDuplicates: false,
+      });
+
+    if (error) {
+      console.error('Error marking message as read:', error);
+      throw error;
     }
+
+    return data;
   } catch (error) {
-    console.error('Error marking message as read:', error);
+    console.error('Error in markMessageAsRead:', error);
+    throw error;
   }
 };
 

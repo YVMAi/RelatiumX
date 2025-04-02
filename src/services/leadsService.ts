@@ -57,7 +57,10 @@ export const fetchLeadTeamMembers = async (leadId: number) => {
   try {
     const { data, error } = await supabase
       .from('lead_team')
-      .select('*')
+      .select(`
+        *,
+        profiles(id, name, email, role_id)
+      `)
       .eq('lead_id', leadId);
 
     if (error) {

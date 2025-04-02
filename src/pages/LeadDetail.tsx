@@ -12,17 +12,33 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { fetchLeadById } from '@/services/leadsService';
+import { fetchLeadById, fetchLeadTeamMembers } from '@/services/leadsService';
 import { LEAD_STATUSES } from '@/utils/constants';
 import { formatInrCrores, formatDate } from '@/utils/format';
-import { ArrowLeft, Building, User, Calendar, Phone, Mail, Globe, FileText, Upload, PlusCircle } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Building, 
+  User, 
+  Calendar, 
+  Phone, 
+  Mail, 
+  Globe, 
+  FileText, 
+  Upload, 
+  PlusCircle,
+  Users
+} from 'lucide-react';
 import { ChatPanel } from '@/components/chat/ChatPanel';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { TaskSection } from '@/components/leads/TaskSection';
+import { NotesDocumentsSection } from '@/components/leads/NotesDocumentsSection';
 
 const LeadDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [lead, setLead] = useState<any>(null);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -38,6 +54,11 @@ const LeadDetail = () => {
         if (data) {
           console.log("Lead data loaded:", data);
           setLead(data);
+          
+          // Fetch team members
+          const teamData = await fetchLeadTeamMembers(leadId);
+          console.log("Team members loaded:", teamData);
+          setTeamMembers(teamData);
         } else {
           toast({
             title: 'Lead not found',
@@ -259,40 +280,120 @@ const LeadDetail = () => {
                     </div>
                   </div>
                 )}
-                
-                {lead.lead_contacts && lead.lead_contacts.length > 0 && (
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium mb-3">Additional Contacts</h4>
-                    <div className="space-y-3">
-                      {lead.lead_contacts.map((contact: any) => (
-                        <div key={contact.id} className="border rounded-md p-3">
-                          <div className="font-medium">{contact.name}</div>
-                          {contact.designation && (
-                            <div className="text-sm text-muted-foreground">
-                              {contact.designation}
-                            </div>
-                          )}
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {contact.email && (
-                              <a 
-                                href={`mailto:${contact.email}`}
-                                className="text-xs text-blue-600 hover:underline"
-                              >
-                                {contact.email}
-                              </a>
-                            )}
-                            {contact.phone && (
-                              <a 
-                                href={`tel:${contact.phone}`}
-                                className="text-xs text-blue-600 hover:underline"
-                              >
-                                {contact.phone}
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+              </CardContent>
+            </Card>
+
+            {/* Lead Owner & Team Members Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Lead Team</CardTitle>
+                <CardDescription>Owner and team members assigned to this lead</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {lead.profiles && (
+                  <div className="flex items-start gap-3 pb-3 border-b">
+                    <User className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium">Lead Owner</div>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback>{lead.profiles.name ? lead.profiles.name.charAt(0) : '?'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm">{lead.profiles.name}</span>
+                      </div>
+                      {lead.profiles.email && (
+                        <a 
+                          href={`mailto:${lead.profiles.email}`}
+                          className="text-xs text-blue-600 hover:underline block mt-1"
+                        >
+                          {lead.profiles.email}
+                        </a>
+                      )}
                     </div>
+                  </div>
+                )}
+
+                {teamMembers && teamMembers.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <Users className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div className="w-full">
+                      <div className="font-medium">Team Members</div>
+                      <div className="space-y-2 mt-2">
+                        {teamMembers.map((member) => (
+                          <div key={member.id} className="flex items-center gap-2 py-1 px-2 bg-muted/50 rounded-md">
+                            <Avatar className="h-6 w-6">
+                              <AvatarFallback>
+                                {member.profiles?.name ? member.profiles.name.charAt(0) : '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-sm font-medium">{member.profiles?.name || 'Unknown'}</div>
+                              {member.profiles?.email && (
+                                <a 
+                                  href={`mailto:${member.profiles.email}`}
+                                  className="text-xs text-blue-600 hover:underline"
+                                >
+                                  {member.profiles.email}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(!teamMembers || teamMembers.length === 0) && !lead.profiles && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No team members assigned to this lead.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            {/* Lead Contacts Card - showing all contacts */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Contacts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {lead.lead_contacts && lead.lead_contacts.length > 0 ? (
+                  <div className="space-y-3">
+                    {lead.lead_contacts.map((contact: any) => (
+                      <div key={contact.id} className="border rounded-md p-3">
+                        <div className="font-medium">{contact.name}</div>
+                        {contact.designation && (
+                          <div className="text-sm text-muted-foreground">
+                            {contact.designation}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {contact.email && (
+                            <a 
+                              href={`mailto:${contact.email}`}
+                              className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                              <Mail className="h-3 w-3" />
+                              {contact.email}
+                            </a>
+                          )}
+                          {contact.phone && (
+                            <a 
+                              href={`tel:${contact.phone}`}
+                              className="text-xs text-blue-600 hover:underline flex items-center gap-1"
+                            >
+                              <Phone className="h-3 w-3" />
+                              {contact.phone}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No additional contacts for this lead.
                   </div>
                 )}
               </CardContent>
@@ -333,59 +434,11 @@ const LeadDetail = () => {
         </TabsContent>
         
         <TabsContent value="tasks" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Tasks</CardTitle>
-                <CardDescription>
-                  Manage tasks related to this lead
-                </CardDescription>
-              </div>
-              <Button>
-                <PlusCircle className="h-4 w-4 mr-2" />
-                Add Task
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Tasks will be implemented here */}
-                <div className="text-center py-8 text-muted-foreground">
-                  No tasks yet. Add a task to get started.
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <TaskSection leadId={parseInt(id as string)} />
         </TabsContent>
         
         <TabsContent value="notes" className="mt-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Notes & Documents</CardTitle>
-                <CardDescription>
-                  Keep track of important notes and documents
-                </CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Add Note
-                </Button>
-                <Button>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Notes and documents will be implemented here */}
-                <div className="text-center py-8 text-muted-foreground">
-                  No notes or documents yet. Add some to get started.
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <NotesDocumentsSection leadId={parseInt(id as string)} />
         </TabsContent>
       </Tabs>
     </div>
