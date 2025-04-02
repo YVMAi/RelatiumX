@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, Paperclip, Send, Smile } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { fetchLeadMessages, createLeadMessage, markMessageAsRead as supabaseMarkMessageAsRead } from '@/services/chatService';
+import { fetchLeadMessages, sendMessage, markMessageAsRead as supabaseMarkMessageAsRead } from '@/services/chatService';
 import { LeadMessage } from '@/types/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -19,7 +20,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ leadId, leadName }) => {
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { currentUser } = useAuth();
+  const { user } = useAuth();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -34,7 +35,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ leadId, leadName }) => {
         // Mark all messages as read
         if (messages.length > 0) {
           messages.forEach(msg => {
-            if (msg.user_id !== currentUser?.id) {
+            if (msg.user_id !== user?.id) {
               markMessageAsRead(msg.id);
             }
           });
@@ -50,7 +51,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ leadId, leadName }) => {
     if (leadId) {
       fetchMessages();
     }
-  }, [leadId, currentUser?.id]);
+  }, [leadId, user?.id]);
 
   useEffect(() => {
     // Scroll to the bottom of the chat when messages are updated
@@ -66,11 +67,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ leadId, leadName }) => {
         // Create a new message
         const messageData = {
           lead_id: leadId,
-          user_id: currentUser?.id,
-          content: newMessage,
+          user_id: user?.id,
+          message: newMessage, // Use message instead of content
         };
         
-        const newMessageData = await createLeadMessage(messageData);
+        const newMessageData = await sendMessage(messageData);
 
         setMessages(prevMessages => [...prevMessages, newMessageData as unknown as LeadMessage]);
         setNewMessage('');
@@ -123,15 +124,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ leadId, leadName }) => {
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={`flex items-start gap-2 ${msg.user_id === currentUser?.id ? 'justify-end' : 'justify-start'}`}
+                className={`flex items-start gap-2 ${msg.user_id === user?.id ? 'justify-end' : 'justify-start'}`}
               >
-                {msg.user_id !== currentUser?.id && (
+                {msg.user_id !== user?.id && (
                   <Avatar className="h-8 w-8">
                     <AvatarFallback>{msg.profiles?.name ? msg.profiles.name.charAt(0) : '?'}</AvatarFallback>
                   </Avatar>
                 )}
-                <div className={`rounded-xl p-2 ${msg.user_id === currentUser?.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                  <div className="text-sm">{msg.content}</div>
+                <div className={`rounded-xl p-2 ${msg.user_id === user?.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  <div className="text-sm">{msg.message}</div>
                   <div className="text-xs text-muted-foreground mt-1">
                     {msg.profiles?.name || 'Unknown'} - {new Date(msg.created_at).toLocaleTimeString()}
                   </div>

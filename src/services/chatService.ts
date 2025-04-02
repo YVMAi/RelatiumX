@@ -340,14 +340,49 @@ export const markMessageAsDelivered = async (messageId: string) => {
   }
 };
 
+// Create a new lead message
+export const createLeadMessage = async (messageData: LeadMessageInsert) => {
+  try {
+    const { data, error } = await supabase
+      .from('lead_messages')
+      .insert(messageData)
+      .select(`
+        *,
+        profiles!lead_messages_user_id_fkey(*),
+        mentions:message_mentions(*),
+        attachments:message_attachments(*)
+      `)
+      .single();
+
+    if (error) {
+      console.error('Error creating message:', error);
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in createLeadMessage:', error);
+    throw error;
+  }
+};
+
 // Mark message as read by a user
 export const markMessageAsRead = async (messageId: string) => {
   try {
+    // Get the current user ID directly instead of relying on a promise
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    
+    if (!userId) {
+      console.error('No authenticated user found');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('message_read_receipts')
       .upsert({
         message_id: messageId,
-        user_id: supabase.auth.getUser().then(res => res.data.user?.id || ''),
+        user_id: userId, // Use directly retrieved userId
         read_at: new Date().toISOString(),
       }, 
       { 

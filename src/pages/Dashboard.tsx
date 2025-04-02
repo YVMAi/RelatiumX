@@ -50,7 +50,8 @@ const mapToFilterOptions = (items: string[] | { id: string | number, name: strin
   });
 };
 
-const getStageOptions = (stages: { id: number; stage_name: string }[]) => {
+// Convert stage objects to the correct format expected by mapToFilterOptions
+const getStageOptions = (stages: { id: number; stage_name: string }[]): { id: number | string; name: string }[] => {
   return stages.map(stage => ({
     id: stage.id,
     name: stage.stage_name
@@ -92,7 +93,9 @@ const Dashboard = () => {
         setOwnerOptions(mapToFilterOptions(options.owners));
         setIndustryOptions(mapToFilterOptions(options.industries));
         setProductOptions(mapToFilterOptions(options.products));
-        setStageOptions(mapToFilterOptions(options.stages));
+        // Fix: Convert stages to the expected format before using mapToFilterOptions
+        const formattedStages = getStageOptions(options.stages);
+        setStageOptions(mapToFilterOptions(formattedStages));
       } catch (error) {
         console.error('Error loading filter options:', error);
       }
