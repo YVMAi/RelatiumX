@@ -59,7 +59,6 @@ import {
 import { Lead, LeadStage } from '@/types/dashboard';
 import { useNavigate } from 'react-router-dom';
 
-// Define the schema for the form
 const formSchema = z.object({
   client_company: z.string().min(2, {
     message: "Client Company must be at least 2 characters.",
@@ -93,7 +92,6 @@ const Dashboard: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // React Hook Form setup
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -106,34 +104,27 @@ const Dashboard: React.FC = () => {
     },
   })
 
-  // Function to handle form submission
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setIsLoading(true);
       
-      // Convert estimated_value to a number
       const estimatedValue = parseFloat(values.estimated_value);
       
-      // Create a new lead object
       const newLead = {
         ...values,
         estimated_value: estimatedValue,
-        next_activity: values.next_activity.toISOString(), // Format date as string
+        next_activity: values.next_activity.toISOString(),
       };
       
-      // Call the createLead service
       await createLeadService(newLead);
       
-      // Show a success toast
       toast({
         title: "Success",
         description: "Lead created successfully.",
       });
       
-      // Reset the form
       form.reset();
       
-      // Refresh the data
       fetchData();
     } catch (error) {
       console.error("Error creating lead:", error);
@@ -151,26 +142,21 @@ const Dashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  // Update the stages mapping in fetchData function or wherever it's used
   const fetchData = async () => {
     try {
       setIsLoading(true);
       
-      // Fetch data from the API
       const { leadsByStage, totalValue, recentLeads, stageData } = await fetchDashboardData();
       
-      // Format the stage data for the filter
       const formattedStages = stageData.map(stage => ({
-        id: stage.id.toString(), // Convert to string
-        name: stage.stage_name  // Use name instead of stage_name for the filter component
+        id: stage.id.toString(),
+        name: stage.stage_name
       }));
       
-      // Set the state
       setLeadsByStage(leadsByStage);
       setTotalValue(totalValue);
       setRecentLeads(recentLeads);
       setStages(formattedStages);
-      
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast({

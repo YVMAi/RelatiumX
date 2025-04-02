@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Lead, LeadStage } from "@/types/supabase";
 
@@ -525,5 +524,98 @@ export const fetchFilterOptions = async () => {
       industries: [],
       products: []
     };
+  }
+};
+
+export const fetchDashboardData = async () => {
+  try {
+    // Fetch leads by stage
+    const leadsByStageData = await fetchLeadsByStage();
+    
+    // Calculate total value
+    const totalValue = leadsByStageData.reduce((sum, stage) => sum + stage.value, 0);
+    
+    // Fetch recent leads
+    const recentLeads = await fetchLeads();
+    
+    // Fetch stages
+    const stageData = await fetchLeadStages();
+    
+    return {
+      leadsByStage: leadsByStageData.map(stage => ({
+        name: stage.stageName,
+        value: stage.count
+      })),
+      totalValue,
+      recentLeads,
+      stageData
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    throw error;
+  }
+};
+
+export const fetchLeads = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('leads')
+      .select(`
+        *,
+        lead_stages (
+          id,
+          stage_name
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10);
+    
+    if (error) {
+      console.error('Error fetching leads:', error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchLeads:', error);
+    return [];
+  }
+};
+
+export const fetchLeadStages = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('lead_stages')
+      .select('*')
+      .order('sequence', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching lead stages:', error);
+      throw error;
+    }
+    
+    return data || [];
+  } catch (error) {
+    console.error('Error in fetchLeadStages:', error);
+    return [];
+  }
+};
+
+export const createLead = async (leadData: Omit<Lead, 'id' | 'lead_stages'>) => {
+  try {
+    const { data, error } = await supabase
+      .from('leads')
+      .insert([leadData])
+      .select();
+    
+    if (error) {
+      console.error('Error creating lead:', error);
+      throw error;
+    }
+    
+    return data?.[0];
+  } catch (error) {
+    console.error('Error in createLead:', error);
+    throw error;
   }
 };
